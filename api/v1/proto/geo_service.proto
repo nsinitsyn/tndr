@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package tinder;
+
+option go_package = "./;tinderpbv1";
+
+import "error_messages.proto";
+
+service GeoService {
+    rpc GetFeedByLocation (GetFeedByLocationRequest) returns (GetFeedByLocationResponse);
+    rpc ChangeLocation (ChangeLocationRequest) returns (ChangeLocationResponse);
+}
+
+message GetFeedByLocationRequest {
+    int64 geo_zone_id = 1;
+}
+
+message GetFeedByLocationResponse {
+    repeated ProfileDto profiles = 1;
+    oneof error {
+        UnexpectedServerError unexpected_server_error = 2;
+        NoNewProfilesError no_new_profiles = 3;
+    }
+}
+
+message ProfileDto {
+    int64 profile_id = 1;
+    string name = 2;
+    string description = 3;
+    repeated string photo_urls = 4;
+}
+
+message ChangeLocationRequest {
+    int64 geo_zone_id = 1;
+}
+
+message ChangeLocationResponse {
+    oneof error {
+        UnexpectedServerError unexpected_server_error = 1;
+        ProfileIdNotFoundError profile_id_not_found = 2;
+        GeoZoneIdNotFoundError geo_zone_id_not_found = 3;
+    }
+}
+
+// Profiles wasn't found in requested geo zone
+message NoNewProfilesError {
+
+}
+
+message ProfileIdNotFoundError {
+
+}
+
+message GeoZoneIdNotFoundError {
+    
+}

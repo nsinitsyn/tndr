@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package tinder;
+
+option go_package = "./;tinderpbv1";
+
+import "error_messages.proto";
+
+service ReactionService {
+    rpc Like (LikeRequest) returns (LikeResponse);
+    rpc Dislike (DislikeRequest) returns (DislikeResponse);
+}
+
+message LikeRequest {
+    int64 profile_id = 1;
+}
+
+message LikeResponse {
+    oneof error {
+        UnexpectedServerError unexpected_server_error = 1;
+    }
+}
+
+message DislikeRequest{
+    int64 profile_id = 1;
+}
+
+message DislikeResponse {
+    oneof error {
+        UnexpectedServerError unexpected_server_error = 1;
+    }
+}

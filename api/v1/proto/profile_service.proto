@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package tinder;
+
+option go_package = "./;tinderpbv1";
+option csharp_namespace = "TinderApiV1";
+
+import "error_messages.proto";
+
+service ProfileService {
+    rpc UpdateProfile (UpdateProfileRequest) returns (UpdateProfileResponse);
+    rpc GetProfiles (GetProfilesRequest) returns (GetProfilesResponse);
+}
+
+message UpdateProfileRequest {
+    ProfileChangeDto Profile = 1;
+}
+
+message UpdateProfileResponse {
+    oneof error {
+        UnexpectedServerError unexpected_server_error = 1;
+    }
+}
+
+message ProfileChangeDto {
+    bool sex = 1;
+    int32 age = 2;
+    string name = 3;
+    string description = 4;
+    repeated string photo_urls = 5;
+}
+
+message GetProfilesRequest {
+    repeated int64 profile_ids = 1;
+}
+
+message GetProfilesResponse {
+    repeated ProfileGetDto Profiles = 1;
+    oneof error {
+        UnexpectedServerError unexpected_server_error = 2;
+    }
+}
+
+message ProfileGetDto {
+    int64 profile_id = 1;
+    string name = 2;
+    string description = 3;
+    repeated string photo_urls = 4;
+}
