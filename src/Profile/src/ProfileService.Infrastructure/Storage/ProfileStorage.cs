@@ -3,6 +3,7 @@ using Npgsql;
 using NpgsqlTypes;
 using ProfileService.Services.Dependencies;
 using ProfileService.Services.Entities;
+using ProfileService.Services.Exceptions;
 
 namespace ProfileService.Infrastructure.Storage;
 
@@ -36,7 +37,7 @@ public class ProfileStorage : IProfileStorage
         if (!await reader.ReadAsync(cancellationToken))
         {
             _logger.LogError("Unexpected behavior. Get profile result is null. Profile id: {profileId}", profileId);
-            throw new InvalidOperationException("Unexpected behavior. Get profile result is null.");
+            throw new NotLoggableException();
         }
 
         return new ProfileEntity
@@ -77,7 +78,7 @@ public class ProfileStorage : IProfileStorage
         if (executionResult == null)
         {
             _logger.LogError("Unexpected behavior. Insert profile result is null. Profile: {@profile}", profile);
-            throw new InvalidOperationException("Unexpected behavior. Insert profile result is null.");
+            throw new NotLoggableException();
         }
         
         var profileId = long.Parse(executionResult.ToString()!);
