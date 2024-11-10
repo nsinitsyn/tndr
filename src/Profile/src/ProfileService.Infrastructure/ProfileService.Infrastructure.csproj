@@ -10,4 +10,9 @@
       <ProjectReference Include="..\ProfileService.Services\ProfileService.Services.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Confluent.Kafka" Version="2.6.0" />
+      <PackageReference Include="Npgsql" Version="8.0.5" />
+    </ItemGroup>
+
 </Project>

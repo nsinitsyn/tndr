@@ -1,11 +1,11 @@
 ﻿using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
-using ProfileService.Api.GrpcServices;
+using ProfileService.Api.Services;
 using Serilog;
 
 namespace ProfileService.Api.Extensions;
 
-public static class WebApplicationExtensions
+public static class ApplicationExtensions
 {
     public static void ConfigureApplication(this WebApplication app)
     {

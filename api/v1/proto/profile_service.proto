@@ -12,8 +12,24 @@ service ProfileService {
     rpc GetProfiles (GetProfilesRequest) returns (GetProfilesResponse);
 }
 
+message AddProfileRequest {
+    
+}
+
+message AddProfileResponse {
+    int64 profile_id = 1;
+}
+
+message ProfileAddDto {
+    bool sex = 1;
+    int32 age = 2;
+    string name = 3;
+    string description = 4;
+    repeated string photo_urls = 5;
+}
+
 message UpdateProfileRequest {
-    ProfileChangeDto Profile = 1;
+    ProfileUpdateDto profile = 1;
 }
 
 message UpdateProfileResponse {
@@ -22,7 +38,7 @@ message UpdateProfileResponse {
     }
 }
 
-message ProfileChangeDto {
+message ProfileUpdateDto {
     bool sex = 1;
     int32 age = 2;
     string name = 3;
@@ -35,7 +51,7 @@ message GetProfilesRequest {
 }
 
 message GetProfilesResponse {
-    repeated ProfileGetDto Profiles = 1;
+    repeated ProfileGetDto profiles = 1;
     oneof error {
         UnexpectedServerError unexpected_server_error = 2;
     }

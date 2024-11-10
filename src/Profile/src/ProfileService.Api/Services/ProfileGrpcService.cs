@@ -5,7 +5,7 @@ using ProfileService.Domain;
 using TinderApiV1;
 using Service = ProfileService.Services.ProfileService;
 
-namespace ProfileService.Api.GrpcServices;
+namespace ProfileService.Api.Services;
 
 [Authorize]
 public class ProfileGrpcService : TinderApiV1.ProfileService.ProfileServiceBase
@@ -25,6 +25,7 @@ public class ProfileGrpcService : TinderApiV1.ProfileService.ProfileServiceBase
     }
 
     // grpcurl -H 'authorization: Bearer <jwt_token>' -plaintext -d '{"Profile":null}' 172.24.48.1:2340 tinder.ProfileService/UpdateProfile
+    // grpcurl -H 'authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJQcm9maWxlSWQiOiIxMCIsImV4cCI6MTc2MjcxOTY2NSwiaXNzIjoiQXV0aFNlcnZlciIsImF1ZCI6IkF1dGhDbGllbnQifQ.pDWIoPzTE9Q_ccKgC11CMiczkKx52dYikYZEC6qvAbU' -plaintext -d '{"profile":{"age":28, "name":"Max", "description":"fff", "photo_urls":["123"]}}' 172.24.48.1:2340 tinder.ProfileService/UpdateProfile
     public override async Task<UpdateProfileResponse> UpdateProfile(UpdateProfileRequest request, ServerCallContext context)
     {
         await _profileService.UpdateProfile(new ProfileEntity

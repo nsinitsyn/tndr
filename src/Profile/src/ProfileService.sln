@@ -14,6 +14,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Debugging", "Debugging", "{
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "JwtGenerator", "Debugging\JwtGenerator\JwtGenerator.csproj", "{2631914B-8998-4ED9-826D-018707258A75}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Utils", "Utils", "{393EBA90-7387-4F67-86D1-0DD9A749EB8D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -47,5 +49,6 @@ Global
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{2631914B-8998-4ED9-826D-018707258A75} = {592F7435-C404-4D0B-98D5-B9967563657D}
+		{D2D20DEC-9ADF-41E0-A1FC-D332A5092688} = {393EBA90-7387-4F67-86D1-0DD9A749EB8D}
 	EndGlobalSection
 EndGlobal

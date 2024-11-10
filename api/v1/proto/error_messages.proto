@@ -5,6 +5,7 @@ package tinder;
 option go_package = "./;tinderpbv1";
 option csharp_namespace = "TinderApiV1";
 
+// todo: replaced to RpcException with status=Interval. Need remove...
 message UnexpectedServerError {
     string external_details = 1; // message for users
     string internal_details = 2; // message for logging and diagnostic

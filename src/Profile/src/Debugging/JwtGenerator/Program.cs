@@ -3,7 +3,7 @@ using System.Security.Claims;
 using JwtGenerator;
 using Microsoft.IdentityModel.Tokens;
 
-var claims = new List<Claim> { new("ProfileId", 100.ToString()) };
+var claims = new List<Claim> { new("ProfileId", 10.ToString()) };
 
 var jwt = new JwtSecurityToken(
     issuer: AuthOptions.Issuer,

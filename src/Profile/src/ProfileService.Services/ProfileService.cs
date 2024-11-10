@@ -1,29 +1,15 @@
 ﻿using ProfileService.Domain;
-using ProfileService.Services.Entities.Messaging;
+using ProfileService.Services.Dependencies;
 
 namespace ProfileService.Services;
 
-public interface IProfileRepository
-{
-    Task AddProfile(ProfileEntity profile);
-    Task UpdateProfile(ProfileEntity profile);
-    Task<ProfileEntity> GetProfiles();
-}
-
-public interface IProfileQueueNotifier
-{
-    Task SendProfileUpdatedMessage(ProfileUpdatedQueueMessage profileUpdatedMessage);
-}
-
 public class ProfileService
 {
-    private readonly IProfileRepository _profileRepository;
-    private readonly IProfileQueueNotifier _profileQueueNotifier;
+    private readonly IProfileStorage _profileStorage;
 
-    public ProfileService(IProfileRepository profileRepository, IProfileQueueNotifier profileQueueNotifier)
+    public ProfileService(IProfileStorage profileStorage)
     {
-        _profileRepository = profileRepository;
-        _profileQueueNotifier = profileQueueNotifier;
+        _profileStorage = profileStorage;
     }
     
     public Task<long> AddProfile(ProfileEntity profile, CancellationToken cancellationToken)
@@ -31,9 +17,9 @@ public class ProfileService
         throw new NotImplementedException();
     }
     
-    public Task UpdateProfile(ProfileEntity profile, CancellationToken cancellationToken)
+    public async Task UpdateProfile(ProfileEntity profile, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        await _profileStorage.UpdateProfile(profile);
     }
     
     public Task GetProfiles(IList<long> profileId, CancellationToken cancellationToken)

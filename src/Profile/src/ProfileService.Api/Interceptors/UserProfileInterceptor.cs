@@ -2,7 +2,7 @@
 using Grpc.Core.Interceptors;
 using ProfileService.Api.Authentication;
 
-namespace ProfileService.Api.GrpcInterceptors;
+namespace ProfileService.Api.Interceptors;
 
 public class UserProfileInterceptor : Interceptor
 {
