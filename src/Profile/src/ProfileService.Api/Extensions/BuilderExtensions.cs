@@ -32,7 +32,29 @@ public static class BuilderExtensions
         
         builder.Services.AddHttpContextAccessor();
         
-        builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        builder.Services.AddHealthChecks()
+            .AddCheck<ReadinessHealthCheck>("Startup", tags: new[] { "ready" });
+        
+        AddAuthentication(builder.Services);
+        AddAuthorization(builder.Services);
+        AddGrpc(builder.Services);
+        AddNpgsql(builder.Services, builder.Configuration);
+
+        AddServices(builder.Services);
+        builder.Services.AddApplicationServices();
+        builder.Services.AddInfrastructureServices();
+    }
+    
+    private static void AddServices(IServiceCollection services)
+    {
+        services.AddScoped<UserProfileProvider>();
+        services.AddScoped<IUserProfileSetter>(sp => sp.GetRequiredService<UserProfileProvider>());
+        services.AddScoped<IUserProfileProvider>(sp => sp.GetRequiredService<UserProfileProvider>());
+    }
+
+    private static void AddAuthentication(IServiceCollection services)
+    {
+        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>
             {
                 options.TokenValidationParameters = new TokenValidationParameters
@@ -46,42 +68,56 @@ public static class BuilderExtensions
                     ValidateIssuerSigningKey = true,
                 };
             });
-        builder.Services.AddAuthorization();
+    }
 
-        builder.Services.AddGrpc(options =>
+    private static void AddAuthorization(IServiceCollection services)
+    {
+        services.AddAuthorization(options =>
         {
-            options.EnableMessageValidation();
-            options.Interceptors.Add<ExceptionHandlerInterceptor>();
-            options.Interceptors.Add<UserProfileInterceptor>();
-        });
-        builder.Services.AddGrpcReflection();
-        builder.Services.AddGrpcValidation();
-        builder.Services.AddValidator<UpdateProfileRequestValidator>();
-        builder.Services.AddValidator<ProfileUpdateDtoValidator>();
-
-        var kafkaConfiguration = kafkaSection.Get<KafkaConfiguration>();
-        ArgumentNullException.ThrowIfNull(kafkaConfiguration);
-
-        builder.Services.AddHealthChecks()
-            .AddCheck<ReadinessHealthCheck>("Startup", tags: new[] { "ready" })
-            // todo: need it?
-            .AddKafka(options =>
+            options.AddPolicy("Administrator", policy =>
             {
-                options.BootstrapServers = kafkaConfiguration.BootstrapServers;
+                policy.AuthenticationSchemes.Add(JwtBearerDefaults.AuthenticationScheme);
+                policy.RequireClaim("Role", "Administrator");
+            });
+            
+            options.AddPolicy("MatchService", policy =>
+            {
+                policy.AuthenticationSchemes.Add(JwtBearerDefaults.AuthenticationScheme);
+                policy.RequireClaim("Service", "MatchService");
             });
 
-        var connectionString = builder.Configuration.GetConnectionString("Profile");
+            options.AddPolicy("AdministratorOrMatchService", policy =>
+            {
+                policy.AuthenticationSchemes.Add(JwtBearerDefaults.AuthenticationScheme);
+                policy.RequireAssertion(context =>
+                    context.User.HasClaim(c =>
+                        c is { Type: "Role", Value: "Administrator" } or { Type: "Service", Value: "MatchService" }));
+            });
+        });
+    }
+    
+    private static void AddGrpc(IServiceCollection services)
+    {
+        services.AddGrpc(options =>
+        {
+            options.EnableMessageValidation();
+            options.Interceptors.Add<UserProfileInterceptor>();
+            options.Interceptors.Add<LoggingInterceptor>();
+        });
+        services.AddGrpcReflection();
+        services.AddGrpcValidation();
+        services.AddValidator<ProfileDtoValidator>();
+        services.AddValidator<CreateProfileValidator>();
+        services.AddValidator<UpdateProfileValidator>();
+    }
+
+    private static void AddNpgsql(IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString("Profile");
         if (string.IsNullOrWhiteSpace(connectionString))
         {
             throw new InvalidOperationException("Connection string cannot be null or empty.");
         }
-        builder.Services.AddNpgsqlDataSource(connectionString);
-        
-        builder.Services.AddScoped<UserProfileProvider>();
-        builder.Services.AddScoped<IUserProfileSetter>(sp => sp.GetRequiredService<UserProfileProvider>());
-        builder.Services.AddScoped<IUserProfileProvider>(sp => sp.GetRequiredService<UserProfileProvider>());
-
-        builder.Services.AddApplicationServices();
-        builder.Services.AddInfrastructureServices();
+        services.AddNpgsqlDataSource(connectionString);
     }
 }

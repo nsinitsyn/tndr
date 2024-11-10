@@ -14,12 +14,12 @@ public class ProfileOutboxStorage : IProfileOutboxStorage
         _dataSource = dataSource;
     }
     
-    public async Task<IList<ProfileOutboxEntity>> GetProfileOutbox(int limit)
+    public async Task<IList<ProfileOutboxEntity>> GetProfileOutbox(int limit, CancellationToken cancellationToken)
     {
         var result = new List<ProfileOutboxEntity>(limit);
         
         await using var connection = _dataSource.CreateConnection();
-        await connection.OpenAsync();
+        await connection.OpenAsync(cancellationToken);
 
         var command = new NpgsqlCommand(
             """
@@ -33,8 +33,8 @@ public class ProfileOutboxStorage : IProfileOutboxStorage
         
         command.Parameters.Add(new() { Value = limit });
 
-        var reader = await command.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
+        var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
         {
             result.Add(new ProfileOutboxEntity
             {
@@ -51,10 +51,10 @@ public class ProfileOutboxStorage : IProfileOutboxStorage
         return result;
     }
 
-    public async Task ClearProfileOutbox(List<long> ids)
+    public async Task ClearProfileOutbox(List<long> ids, CancellationToken cancellationToken)
     {
         await using var connection = _dataSource.CreateConnection();
-        await connection.OpenAsync();
+        await connection.OpenAsync(cancellationToken);
 
         var command = new NpgsqlCommand(
             """
@@ -67,6 +67,6 @@ public class ProfileOutboxStorage : IProfileOutboxStorage
         command.Parameters.Add(new()
             { ParameterName = "ids", Value = ids, NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Bigint });
 
-        await command.ExecuteNonQueryAsync();
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 }

@@ -35,6 +35,8 @@ public class MessagingService : IMessagingService, IDisposable
         await _producer.ProduceAsync(
             _configuration.TopicName,
             new Message<string, ProfileUpdatedMessage> { Key = message.ProfileId.ToString(), Value = message, });
+        
+        _logger.LogInformation("Message was published: {@message}", message);
     }
 
     public void Dispose()

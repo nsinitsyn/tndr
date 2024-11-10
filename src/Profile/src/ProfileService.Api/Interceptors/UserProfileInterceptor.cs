@@ -29,8 +29,12 @@ public class UserProfileInterceptor : Interceptor
         }
         
         var userPrincipal = _httpContextAccessor.HttpContext.User;
+        
+        var printableClaims = string.Join(", ", userPrincipal.Claims.Select(x => $"{x.Type}:{x.Value}"));
+        _logger.LogInformation("Request claims: {claims}", printableClaims);
+        
         var profileIdClaim = userPrincipal.FindFirst(CustomClaimTypes.ProfileId);
-
+        
         if (profileIdClaim != null)
         {
             if (long.TryParse(profileIdClaim.Value, out var profileId))

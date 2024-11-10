@@ -1,8 +1,7 @@
-﻿namespace ProfileService.Domain;
+﻿namespace ProfileService.Services.Entities;
 
-public class ProfileEntity
+public class CreateProfileEntity
 {
-    public long ProfileId { get; set; }
     public bool Sex { get; set; }
     public int Age { get; set; }
     public string Name { get; set; } = null!;

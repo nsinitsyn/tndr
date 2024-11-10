@@ -5,45 +5,41 @@ package tinder;
 option go_package = "./;tinderpbv1";
 option csharp_namespace = "TinderApiV1";
 
-import "error_messages.proto";
-
 service ProfileService {
+    rpc GetMyProfile (GetMyProfileRequest) returns (GetMyProfileResponse);
+    rpc CreateProfile (CreateProfileRequest) returns (CreateProfileResponse);
     rpc UpdateProfile (UpdateProfileRequest) returns (UpdateProfileResponse);
     rpc GetProfiles (GetProfilesRequest) returns (GetProfilesResponse);
 }
 
-message AddProfileRequest {
-    
+message ProfileDto {
+    bool sex = 1;
+    int32 age = 2;
+    string name = 3;
+    string description = 4;
+    repeated string photo_urls = 5;
 }
 
-message AddProfileResponse {
+message GetMyProfileRequest {
+}
+
+message GetMyProfileResponse {
+    ProfileDto profile = 1;
+}
+
+message CreateProfileRequest {
+    ProfileDto profile = 1;
+}
+
+message CreateProfileResponse {
     int64 profile_id = 1;
 }
 
-message ProfileAddDto {
-    bool sex = 1;
-    int32 age = 2;
-    string name = 3;
-    string description = 4;
-    repeated string photo_urls = 5;
-}
-
 message UpdateProfileRequest {
-    ProfileUpdateDto profile = 1;
+    ProfileDto profile = 1;
 }
 
 message UpdateProfileResponse {
-    oneof error {
-        UnexpectedServerError unexpected_server_error = 1;
-    }
-}
-
-message ProfileUpdateDto {
-    bool sex = 1;
-    int32 age = 2;
-    string name = 3;
-    string description = 4;
-    repeated string photo_urls = 5;
 }
 
 message GetProfilesRequest {
@@ -52,9 +48,6 @@ message GetProfilesRequest {
 
 message GetProfilesResponse {
     repeated ProfileGetDto profiles = 1;
-    oneof error {
-        UnexpectedServerError unexpected_server_error = 2;
-    }
 }
 
 message ProfileGetDto {

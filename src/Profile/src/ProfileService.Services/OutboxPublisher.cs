@@ -26,11 +26,15 @@ public class OutboxPublisher : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        _logger.LogInformation("Outbox processing started...");
+        
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                var profiles = await _outboxStorage.GetProfileOutbox(10);
+                _logger.LogDebug("Outbox processing iteration started...");
+                
+                var profiles = await _outboxStorage.GetProfileOutbox(10, stoppingToken);
 
                 if (!profiles.Any())
                 {
@@ -50,7 +54,13 @@ public class OutboxPublisher : BackgroundService
                     });
                 }
 
-                await _outboxStorage.ClearProfileOutbox(profiles.Select(x => x.OrderingId).ToList());
+                await _outboxStorage.ClearProfileOutbox(profiles.Select(x => x.OrderingId).ToList(), stoppingToken);
+                
+                _logger.LogDebug("Outbox part was cleared.");
+            }
+            catch (TaskCanceledException ex)
+            {
+                _logger.LogError(ex, "Operation was canceled.");
             }
             catch (Exception ex)
             {
@@ -59,6 +69,7 @@ public class OutboxPublisher : BackgroundService
             }
             finally
             {
+                _logger.LogDebug("Outbox processing iteration was finished.");
                 await Task.Delay(TimeSpan.FromSeconds(2), stoppingToken);
             }
         }

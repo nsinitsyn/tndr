@@ -1,24 +1,60 @@
-﻿using Npgsql;
+﻿using Microsoft.Extensions.Logging;
+using Npgsql;
 using NpgsqlTypes;
-using ProfileService.Domain;
 using ProfileService.Services.Dependencies;
+using ProfileService.Services.Entities;
 
 namespace ProfileService.Infrastructure.Storage;
 
 public class ProfileStorage : IProfileStorage
 {
+    private readonly ILogger<ProfileStorage> _logger;
     private readonly NpgsqlDataSource _dataSource;
 
-    public ProfileStorage(NpgsqlDataSource dataSource)
+    public ProfileStorage(ILogger<ProfileStorage> logger, NpgsqlDataSource dataSource)
     {
+        _logger = logger;
         _dataSource = dataSource;
     }
-    
-    public async Task AddProfile(ProfileEntity profile)
+
+    public async Task<ProfileEntity> GetProfile(long profileId, CancellationToken cancellationToken)
     {
         await using var connection = _dataSource.CreateConnection();
-        await connection.OpenAsync();
+        await connection.OpenAsync(cancellationToken);
+
+        await using var command = new NpgsqlCommand(
+            """
+            SELECT sex, age, name, description, photos
+            FROM profile
+            WHERE id = $1
+            """, connection);
         
+        command.Parameters.Add(new() { Value = profileId });
+        
+        var reader = await command.ExecuteReaderAsync(cancellationToken);
+
+        if (!await reader.ReadAsync(cancellationToken))
+        {
+            _logger.LogError("Unexpected behavior. Get profile result is null. Profile id: {profileId}", profileId);
+            throw new InvalidOperationException("Unexpected behavior. Get profile result is null.");
+        }
+
+        return new ProfileEntity
+        {
+            ProfileId = profileId,
+            Sex = reader.GetBoolean(0),
+            Age = reader.GetInt16(1),
+            Name = reader.GetString(2),
+            Description = reader.GetString(3),
+            Photos = (string[])reader.GetValue(4)
+        };
+    }
+    
+    public async Task<long> CreateProfile(CreateProfileEntity profile, CancellationToken cancellationToken)
+    {
+        await using var connection = _dataSource.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+
         await using var command = new NpgsqlCommand(
             """
             WITH insert_profile AS (
@@ -28,25 +64,31 @@ public class ProfileStorage : IProfileStorage
             )
             INSERT INTO profile_outbox(profile_id, sex, age, name, description, photos)
             SELECT * FROM insert_profile
-            """, connection)
-        {
-            Parameters =
-            {
-                new() { Value = profile.Sex, NpgsqlDbType = NpgsqlDbType.Boolean },
-                new() { Value = profile.Age, NpgsqlDbType = NpgsqlDbType.Boolean },
-                new() { Value = profile.Name, NpgsqlDbType = NpgsqlDbType.Boolean },
-                new() { Value = profile.Description, NpgsqlDbType = NpgsqlDbType.Boolean },
-            }
-        };
+            RETURNING profile_id
+            """, connection);
         
-        await command.ExecuteNonQueryAsync();
+        command.Parameters.Add(new() { Value = profile.Sex });
+        command.Parameters.Add(new() { Value = profile.Age });
+        command.Parameters.Add(new() { Value = profile.Name });
+        command.Parameters.Add(new() { Value = profile.Description });
+        command.Parameters.Add(new() { Value = profile.Photos, NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
+        
+        var executionResult = await command.ExecuteScalarAsync(cancellationToken);
+        if (executionResult == null)
+        {
+            _logger.LogError("Unexpected behavior. Insert profile result is null. Profile: {@profile}", profile);
+            throw new InvalidOperationException("Unexpected behavior. Insert profile result is null.");
+        }
+        
+        var profileId = long.Parse(executionResult.ToString()!);
+        return profileId;
     }
 
-    public async Task UpdateProfile(ProfileEntity profile)
+    public async Task UpdateProfile(ProfileEntity profile, CancellationToken cancellationToken)
     {
         await using var connection = _dataSource.CreateConnection();
-        await connection.OpenAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
         
         await using var insertProfileCommand = new NpgsqlCommand(
             """
@@ -68,7 +110,7 @@ public class ProfileStorage : IProfileStorage
         insertProfileCommand.Parameters.Add(new() { Value = profile.Description });
         insertProfileCommand.Parameters.Add(new() { Value = profile.Photos, NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
 
-        await insertProfileCommand.ExecuteNonQueryAsync();
+        await insertProfileCommand.ExecuteNonQueryAsync(cancellationToken);
         
         await using var insertOutboxCommand = new NpgsqlCommand(
             """
@@ -83,13 +125,44 @@ public class ProfileStorage : IProfileStorage
         insertOutboxCommand.Parameters.Add(new() { Value = profile.Description });
         insertOutboxCommand.Parameters.Add(new() { Value = profile.Photos, NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Text });
 
-        await insertOutboxCommand.ExecuteNonQueryAsync();
+        await insertOutboxCommand.ExecuteNonQueryAsync(cancellationToken);
 
-        await transaction.CommitAsync();
+        await transaction.CommitAsync(cancellationToken);
     }
 
-    public Task<ProfileEntity> GetProfiles()
+    public async Task<IList<ProfileEntity>> GetProfiles(IList<long> profileIds, CancellationToken cancellationToken)
     {
-        throw new NotImplementedException();
+        var result = new List<ProfileEntity>();
+        
+        await using var connection = _dataSource.CreateConnection();
+        await connection.OpenAsync(cancellationToken);
+        
+        var command = new NpgsqlCommand(
+            """
+            SELECT id, sex, age, name, description, photos 
+            FROM profile
+            WHERE id = ANY(:ids)
+            """,
+            connection
+        );
+
+        command.Parameters.Add(new()
+            { ParameterName = "ids", Value = profileIds, NpgsqlDbType = NpgsqlDbType.Array | NpgsqlDbType.Bigint });
+        
+        var reader = await command.ExecuteReaderAsync(cancellationToken);
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            result.Add(new ProfileEntity
+            {
+                ProfileId = reader.GetInt64(0),
+                Sex = reader.GetBoolean(1),
+                Age = reader.GetInt16(2),
+                Name = reader.GetString(3),
+                Description = reader.GetString(4),
+                Photos = (string[])reader.GetValue(5)
+            });
+        }
+
+        return result;
     }
 }

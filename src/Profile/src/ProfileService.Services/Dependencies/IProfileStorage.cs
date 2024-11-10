@@ -1,10 +1,11 @@
-﻿using ProfileService.Domain;
+﻿using ProfileService.Services.Entities;
 
 namespace ProfileService.Services.Dependencies;
 
 public interface IProfileStorage
 {
-    Task AddProfile(ProfileEntity profile);
-    Task UpdateProfile(ProfileEntity profile);
-    Task<ProfileEntity> GetProfiles();
+    Task<ProfileEntity> GetProfile(long profileId, CancellationToken cancellationToken);
+    Task<long> CreateProfile(CreateProfileEntity profile, CancellationToken cancellationToken);
+    Task UpdateProfile(ProfileEntity profile, CancellationToken cancellationToken);
+    Task<IList<ProfileEntity>> GetProfiles(IList<long> profileIds, CancellationToken cancellationToken);
 }
