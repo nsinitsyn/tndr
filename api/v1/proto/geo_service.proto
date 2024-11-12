@@ -4,8 +4,6 @@ package tinder;
 
 option go_package = "./;tinderpbv1";
 
-import "error_messages.proto";
-
 service GeoService {
     rpc GetFeedByLocation (GetFeedByLocationRequest) returns (GetFeedByLocationResponse);
     rpc ChangeLocation (ChangeLocationRequest) returns (ChangeLocationResponse);
@@ -16,14 +14,13 @@ message GetFeedByLocationRequest {
 }
 
 message GetFeedByLocationResponse {
-    repeated ProfileDto profiles = 1;
+    repeated LocationProfileDto profiles = 1;
     oneof error {
-        UnexpectedServerError unexpected_server_error = 2;
-        NoNewProfilesError no_new_profiles = 3;
+        NoNewProfilesError no_new_profiles = 2;
     }
 }
 
-message ProfileDto {
+message LocationProfileDto {
     int64 profile_id = 1;
     string name = 2;
     string description = 3;
@@ -36,9 +33,8 @@ message ChangeLocationRequest {
 
 message ChangeLocationResponse {
     oneof error {
-        UnexpectedServerError unexpected_server_error = 1;
-        ProfileIdNotFoundError profile_id_not_found = 2;
-        GeoZoneIdNotFoundError geo_zone_id_not_found = 3;
+        ProfileIdNotFoundError profile_id_not_found = 1;
+        GeoZoneIdNotFoundError geo_zone_id_not_found = 2;
     }
 }
 

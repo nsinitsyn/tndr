@@ -1,0 +1,8 @@
+env: "local"
+grpc:
+  port: 2342
+  timeout: 30s
+db:
+  connection_string: "MongoDb"
+reaction_service:
+  url: "http://localhost:2343"
