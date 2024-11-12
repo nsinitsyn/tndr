@@ -4,9 +4,12 @@ import (
 	"context"
 	"sort"
 	"tinder-geo/internal/domain/model"
+	"tinder-geo/internal/server"
 
 	"github.com/mmcloughlin/geohash"
 )
+
+var _ server.Service = (*geoService)(nil)
 
 const precision uint = 5
 
@@ -18,12 +21,12 @@ type ReactionServiceClient interface {
 	GetReactedProfiles(profile_id int64) []model.Profile
 }
 
-type feedService struct {
+type geoService struct {
 	storage               GetStorage
 	reactionServiceClient ReactionServiceClient
 }
 
-func (f feedService) GetFeed(ctx context.Context, profile_id int64, lat, lng float64) []model.Profile {
+func (f geoService) GetFeed(ctx context.Context, profile_id int64, lat, lng float64) []model.Profile {
 	// todo:
 	sex := true
 
@@ -41,7 +44,7 @@ func (f feedService) GetFeed(ctx context.Context, profile_id int64, lat, lng flo
 }
 
 // find intersection by hash algorithm
-func (f feedService) findIntersection(profiles1 []model.Profile, profiles2 []model.Profile) []model.Profile {
+func (f geoService) findIntersection(profiles1 []model.Profile, profiles2 []model.Profile) []model.Profile {
 	m := make(map[int64]struct{}, len(profiles1))
 
 	result := make([]model.Profile, 0, len(profiles1)/2)
