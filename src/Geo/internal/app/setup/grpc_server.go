@@ -1,4 +1,4 @@
-package server
+package setup
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"tinder-geo/internal/config"
+	"tinder-geo/internal/server"
 
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
@@ -51,7 +52,7 @@ func NewGRPCServer(config *config.GRPCConfig, logger *slog.Logger) *GRPCServer {
 	))
 	reflection.Register(grpcServer)
 
-	Register(grpcServer)
+	server.Register(grpcServer)
 
 	return &GRPCServer{
 		serv:   grpcServer,
