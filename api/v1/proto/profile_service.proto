@@ -13,7 +13,7 @@ service ProfileService {
 }
 
 message ProfileDto {
-    bool sex = 1;
+    string gender = 1;
     int32 age = 2;
     string name = 3;
     string description = 4;

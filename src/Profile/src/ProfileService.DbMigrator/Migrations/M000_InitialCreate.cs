@@ -23,7 +23,7 @@ public class M000_InitialCreate
         {
             Create.Table("profile")
                 .WithColumn("id").AsInt64().PrimaryKey().Identity()
-                .WithColumn("sex").AsBoolean().NotNullable()
+                .WithColumn("gender").AsCustom("char").NotNullable()
                 .WithColumn("age").AsInt16().NotNullable()
                 .WithColumn("name").AsString().NotNullable()
                 .WithColumn("description").AsString().NotNullable()
@@ -37,7 +37,7 @@ public class M000_InitialCreate
             Create.Table("profile_outbox")
                 .WithColumn("ordering_id").AsInt64().PrimaryKey().Identity()
                 .WithColumn("profile_id").AsInt64()
-                .WithColumn("sex").AsBoolean().NotNullable()
+                .WithColumn("gender").AsCustom("char").NotNullable()
                 .WithColumn("age").AsInt16().NotNullable()
                 .WithColumn("name").AsString().NotNullable()
                 .WithColumn("description").AsString().NotNullable()

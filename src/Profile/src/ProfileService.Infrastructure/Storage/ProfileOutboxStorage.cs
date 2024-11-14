@@ -23,7 +23,7 @@ public class ProfileOutboxStorage : IProfileOutboxStorage
 
         var command = new NpgsqlCommand(
             """
-            SELECT ordering_id, profile_id, sex, age, name, description, photos
+            SELECT ordering_id, profile_id, gender, age, name, description, photos
             FROM profile_outbox
             ORDER BY ordering_id
             LIMIT $1
@@ -40,7 +40,7 @@ public class ProfileOutboxStorage : IProfileOutboxStorage
             {
                 OrderingId = reader.GetInt64(0),
                 ProfileId = reader.GetInt64(1),
-                Sex = reader.GetBoolean(2),
+                Gender = reader.GetChar(2),
                 Age = reader.GetInt16(3),
                 Name = reader.GetString(4),
                 Description = reader.GetString(5),

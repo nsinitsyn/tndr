@@ -25,7 +25,7 @@ public class ProfileStorage : IProfileStorage
 
         await using var command = new NpgsqlCommand(
             """
-            SELECT sex, age, name, description, photos
+            SELECT gender, age, name, description, photos
             FROM profile
             WHERE id = $1
             """, connection);
@@ -43,7 +43,7 @@ public class ProfileStorage : IProfileStorage
         return new ProfileEntity
         {
             ProfileId = profileId,
-            Sex = reader.GetBoolean(0),
+            Gender = reader.GetChar(0),
             Age = reader.GetInt16(1),
             Name = reader.GetString(2),
             Description = reader.GetString(3),
@@ -59,16 +59,16 @@ public class ProfileStorage : IProfileStorage
         await using var command = new NpgsqlCommand(
             """
             WITH insert_profile AS (
-                INSERT INTO profile (sex, age, name, description, photos)
+                INSERT INTO profile (gender, age, name, description, photos)
                 VALUES ($1, $2, $3, $4, $5)
-                RETURNING id, sex, age, name, description, photos
+                RETURNING id, gender, age, name, description, photos
             )
-            INSERT INTO profile_outbox(profile_id, sex, age, name, description, photos)
+            INSERT INTO profile_outbox(profile_id, gender, age, name, description, photos)
             SELECT * FROM insert_profile
             RETURNING profile_id
             """, connection);
         
-        command.Parameters.Add(new() { Value = profile.Sex });
+        command.Parameters.Add(new() { Value = profile.Gender });
         command.Parameters.Add(new() { Value = profile.Age });
         command.Parameters.Add(new() { Value = profile.Name });
         command.Parameters.Add(new() { Value = profile.Description });
@@ -95,7 +95,7 @@ public class ProfileStorage : IProfileStorage
             """
             UPDATE profile 
             SET
-            	sex = $2,
+            	gender = $2,
             	age = $3,
             	name = $4,
             	description = $5,
@@ -105,7 +105,7 @@ public class ProfileStorage : IProfileStorage
             """, connection, transaction);
         
         insertProfileCommand.Parameters.Add(new() { Value = profile.ProfileId });
-        insertProfileCommand.Parameters.Add(new() { Value = profile.Sex });
+        insertProfileCommand.Parameters.Add(new() { Value = profile.Gender });
         insertProfileCommand.Parameters.Add(new() { Value = profile.Age });
         insertProfileCommand.Parameters.Add(new() { Value = profile.Name });
         insertProfileCommand.Parameters.Add(new() { Value = profile.Description });
@@ -115,12 +115,12 @@ public class ProfileStorage : IProfileStorage
         
         await using var insertOutboxCommand = new NpgsqlCommand(
             """
-            INSERT INTO profile_outbox (profile_id, sex, age, name, description, photos)
+            INSERT INTO profile_outbox (profile_id, gender, age, name, description, photos)
             VALUES ($1, $2, $3, $4, $5, $6)
             """, connection, transaction);
         
         insertOutboxCommand.Parameters.Add(new() { Value = profile.ProfileId });
-        insertOutboxCommand.Parameters.Add(new() { Value = profile.Sex });
+        insertOutboxCommand.Parameters.Add(new() { Value = profile.Gender });
         insertOutboxCommand.Parameters.Add(new() { Value = profile.Age });
         insertOutboxCommand.Parameters.Add(new() { Value = profile.Name });
         insertOutboxCommand.Parameters.Add(new() { Value = profile.Description });
@@ -140,7 +140,7 @@ public class ProfileStorage : IProfileStorage
         
         var command = new NpgsqlCommand(
             """
-            SELECT id, sex, age, name, description, photos 
+            SELECT id, gender, age, name, description, photos 
             FROM profile
             WHERE id = ANY(:ids)
             """,
@@ -156,7 +156,7 @@ public class ProfileStorage : IProfileStorage
             result.Add(new ProfileEntity
             {
                 ProfileId = reader.GetInt64(0),
-                Sex = reader.GetBoolean(1),
+                Gender = reader.GetChar(1),
                 Age = reader.GetInt16(2),
                 Name = reader.GetString(3),
                 Description = reader.GetString(4),

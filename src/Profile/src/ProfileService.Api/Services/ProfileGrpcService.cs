@@ -33,7 +33,7 @@ public class ProfileGrpcService : TinderApiV1.ProfileService.ProfileServiceBase
         {
             Profile = new ProfileDto
             {
-                Sex = profile.Sex,
+                Gender = profile.Gender.ToString(),
                 Age = profile.Age,
                 Name = profile.Name,
                 Description = profile.Description,
@@ -44,12 +44,12 @@ public class ProfileGrpcService : TinderApiV1.ProfileService.ProfileServiceBase
         return result;
     }
 
-    //  grpcurl -H 'authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJQcm9maWxlSWQiOiIxMCIsImV4cCI6MTc2MjcxOTY2NSwiaXNzIjoiQXV0aFNlcnZlciIsImF1ZCI6IkF1dGhDbGllbnQifQ.pDWIoPzTE9Q_ccKgC11CMiczkKx52dYikYZEC6qvAbU' -plaintext -d '{"profile":{"age":32, "name":"Alex", "description":"My profile", "photo_urls":["123", "456"]}}' 172.24.48.1:2340 tinder.ProfileService/CreateProfile
+    //  grpcurl -H 'authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJQcm9maWxlSWQiOiIxMCIsImV4cCI6MTc2MjcxOTY2NSwiaXNzIjoiQXV0aFNlcnZlciIsImF1ZCI6IkF1dGhDbGllbnQifQ.pDWIoPzTE9Q_ccKgC11CMiczkKx52dYikYZEC6qvAbU' -plaintext -d '{"profile":{"age":32, "name":"Alex", "gender":"M", "description":"My profile", "photo_urls":["123", "456"]}}' 172.24.48.1:2340 tinder.ProfileService/CreateProfile
     public override async Task<CreateProfileResponse> CreateProfile(CreateProfileRequest request, ServerCallContext context)
     {
         var profileId = await _profileService.CreateProfile(new CreateProfileEntity
         {
-            Sex = request.Profile.Sex,
+            Gender = request.Profile.Gender.First(),
             Age = request.Profile.Age,
             Name = request.Profile.Name,
             Description = request.Profile.Description,
@@ -69,7 +69,7 @@ public class ProfileGrpcService : TinderApiV1.ProfileService.ProfileServiceBase
         await _profileService.UpdateProfile(new ProfileEntity
         {
             ProfileId = _userProfileProvider.ProfileId,
-            Sex = request.Profile.Sex,
+            Gender = request.Profile.Gender.First(),
             Age = request.Profile.Age,
             Name = request.Profile.Name,
             Description = request.Profile.Description,
