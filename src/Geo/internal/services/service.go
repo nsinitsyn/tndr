@@ -1,10 +1,10 @@
-package geo
+package services
 
 import (
 	"context"
 	"sort"
 	"tinder-geo/internal/domain/model"
-	"tinder-geo/internal/server"
+	"tinder-geo/internal/infrastructure/server"
 
 	"github.com/mmcloughlin/geohash"
 )

@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"tinder-geo/internal/config"
-	"tinder-geo/internal/server"
+	"tinder-geo/internal/infrastructure/server"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors"

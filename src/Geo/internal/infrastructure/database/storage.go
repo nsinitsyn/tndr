@@ -2,10 +2,10 @@ package database
 
 import (
 	"tinder-geo/internal/domain/model"
-	"tinder-geo/internal/services/geo"
+	"tinder-geo/internal/services"
 )
 
-var _ geo.GeoStorage = (*geoStorage)(nil)
+var _ services.GeoStorage = (*geoStorage)(nil)
 
 type geoStorage struct {
 }

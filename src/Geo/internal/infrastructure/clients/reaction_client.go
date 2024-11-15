@@ -2,10 +2,10 @@ package clients
 
 import (
 	"tinder-geo/internal/domain/model"
-	"tinder-geo/internal/services/geo"
+	"tinder-geo/internal/services"
 )
 
-var _ geo.ReactionServiceClient = (*reactionServiceClient)(nil)
+var _ services.ReactionServiceClient = (*reactionServiceClient)(nil)
 
 type reactionServiceClient struct {
 }
