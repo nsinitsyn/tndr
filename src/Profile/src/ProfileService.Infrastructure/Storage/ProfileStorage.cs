@@ -43,7 +43,7 @@ public class ProfileStorage : IProfileStorage
         return new ProfileEntity
         {
             ProfileId = profileId,
-            Gender = reader.GetChar(0),
+            Gender = reader.GetFieldValue<Gender>(0),
             Age = reader.GetInt16(1),
             Name = reader.GetString(2),
             Description = reader.GetString(3),
@@ -156,7 +156,7 @@ public class ProfileStorage : IProfileStorage
             result.Add(new ProfileEntity
             {
                 ProfileId = reader.GetInt64(0),
-                Gender = reader.GetChar(1),
+                Gender = reader.GetFieldValue<Gender>(1),
                 Age = reader.GetInt16(2),
                 Name = reader.GetString(3),
                 Description = reader.GetString(4),

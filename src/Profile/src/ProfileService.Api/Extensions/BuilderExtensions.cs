@@ -1,12 +1,14 @@
 ﻿using Calzolari.Grpc.AspNetCore.Validation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using Npgsql.NameTranslation;
 using ProfileService.Api.Authentication;
 using ProfileService.Api.Health;
 using ProfileService.Api.Interceptors;
 using ProfileService.Api.Validation;
 using ProfileService.Infrastructure.Configuration;
 using ProfileService.Infrastructure.Extensions;
+using ProfileService.Services.Entities;
 using ProfileService.Services.Extensions;
 using Serilog;
 
@@ -118,6 +120,10 @@ public static class BuilderExtensions
         {
             throw new InvalidOperationException("Connection string cannot be null or empty.");
         }
-        services.AddNpgsqlDataSource(connectionString);
+
+        services.AddNpgsqlDataSource(connectionString, opt =>
+        {
+            opt.MapEnum<Gender>("gender", new NpgsqlNullNameTranslator());
+        });
     }
 }

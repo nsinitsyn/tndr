@@ -40,7 +40,7 @@ public class ProfileOutboxStorage : IProfileOutboxStorage
             {
                 OrderingId = reader.GetInt64(0),
                 ProfileId = reader.GetInt64(1),
-                Gender = reader.GetChar(2),
+                Gender = reader.GetFieldValue<Gender>(2),
                 Age = reader.GetInt16(3),
                 Name = reader.GetString(4),
                 Description = reader.GetString(5),

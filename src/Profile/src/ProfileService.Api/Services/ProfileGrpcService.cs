@@ -4,6 +4,8 @@ using ProfileService.Api.Authentication;
 using ProfileService.Services.Entities;
 using TinderApiV1;
 using Service = ProfileService.Services.ProfileService;
+using Gender = ProfileService.Services.Entities.Gender;
+using ApiGender = TinderApiV1.Gender;
 
 namespace ProfileService.Api.Services;
 
@@ -33,7 +35,7 @@ public class ProfileGrpcService : TinderApiV1.ProfileService.ProfileServiceBase
         {
             Profile = new ProfileDto
             {
-                Gender = profile.Gender.ToString(),
+                Gender = (ApiGender)profile.Gender,
                 Age = profile.Age,
                 Name = profile.Name,
                 Description = profile.Description,
@@ -44,12 +46,12 @@ public class ProfileGrpcService : TinderApiV1.ProfileService.ProfileServiceBase
         return result;
     }
 
-    //  grpcurl -H 'authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJQcm9maWxlSWQiOiIxMCIsImV4cCI6MTc2MjcxOTY2NSwiaXNzIjoiQXV0aFNlcnZlciIsImF1ZCI6IkF1dGhDbGllbnQifQ.pDWIoPzTE9Q_ccKgC11CMiczkKx52dYikYZEC6qvAbU' -plaintext -d '{"profile":{"age":32, "name":"Alex", "gender":"M", "description":"My profile", "photo_urls":["123", "456"]}}' 172.24.48.1:2340 tinder.ProfileService/CreateProfile
+    // grpcurl -H 'authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJQcm9maWxlSWQiOiIxMCIsImV4cCI6MTc2MjcxOTY2NSwiaXNzIjoiQXV0aFNlcnZlciIsImF1ZCI6IkF1dGhDbGllbnQifQ.pDWIoPzTE9Q_ccKgC11CMiczkKx52dYikYZEC6qvAbU' -plaintext -d '{"profile":{"age":32, "name":"Alex", "gender":"M", "description":"My profile", "photo_urls":["123", "456"]}}' 172.24.48.1:2340 tinder.ProfileService/CreateProfile
     public override async Task<CreateProfileResponse> CreateProfile(CreateProfileRequest request, ServerCallContext context)
     {
         var profileId = await _profileService.CreateProfile(new CreateProfileEntity
         {
-            Gender = request.Profile.Gender.First(),
+            Gender = (Gender)request.Profile.Gender,
             Age = request.Profile.Age,
             Name = request.Profile.Name,
             Description = request.Profile.Description,
@@ -69,7 +71,7 @@ public class ProfileGrpcService : TinderApiV1.ProfileService.ProfileServiceBase
         await _profileService.UpdateProfile(new ProfileEntity
         {
             ProfileId = _userProfileProvider.ProfileId,
-            Gender = request.Profile.Gender.First(),
+            Gender = (Gender)request.Profile.Gender,
             Age = request.Profile.Age,
             Name = request.Profile.Name,
             Description = request.Profile.Description,

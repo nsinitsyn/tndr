@@ -12,8 +12,14 @@ service ProfileService {
     rpc GetProfiles (GetProfilesRequest) returns (GetProfilesResponse);
 }
 
+enum Gender {
+    UNSPECIFIED = 0;
+    M = 1;
+    F = 2;
+}
+
 message ProfileDto {
-    string gender = 1;
+    Gender gender = 1;
     int32 age = 2;
     string name = 3;
     string description = 4;
