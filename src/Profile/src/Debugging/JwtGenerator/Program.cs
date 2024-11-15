@@ -3,8 +3,8 @@ using System.Security.Claims;
 using JwtGenerator;
 using Microsoft.IdentityModel.Tokens;
 
-// var claims = new List<Claim> { new("ProfileId", 10.ToString()) };
-var claims = new List<Claim> { new("Role", "User") };
+var claims = new List<Claim> { new("ProfileId", 1.ToString()), new("Gender", "M") };
+// var claims = new List<Claim> { new("Role", "User") };
 
 var jwt = new JwtSecurityToken(
     issuer: AuthOptions.Issuer,
@@ -14,6 +14,9 @@ var jwt = new JwtSecurityToken(
     signingCredentials: new SigningCredentials(AuthOptions.GetSymmetricSecurityKey(), SecurityAlgorithms.HmacSha256));
 
 Console.WriteLine(new JwtSecurityTokenHandler().WriteToken(jwt));
+
+// ProfileId: 1, Gender: M
+// eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJQcm9maWxlSWQiOiIxIiwiR2VuZGVyIjoiTSIsImV4cCI6MTc2MzIwNzQxMywiaXNzIjoiQXV0aFNlcnZlciIsImF1ZCI6IkF1dGhDbGllbnQifQ.VAVP65lIUhabxR4UknvQkRKiVCfu116cf3tZC8-dsfw
 
 // ProfileId: 10
 // eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJQcm9maWxlSWQiOiIxMCIsImV4cCI6MTc2MjcxOTY2NSwiaXNzIjoiQXV0aFNlcnZlciIsImF1ZCI6IkF1dGhDbGllbnQifQ.pDWIoPzTE9Q_ccKgC11CMiczkKx52dYikYZEC6qvAbU

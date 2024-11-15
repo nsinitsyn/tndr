@@ -13,8 +13,8 @@ var _ server.Service = (*geoService)(nil)
 
 const precision uint = 5
 
-type GetStorage interface {
-	GetProfilesByGeohash(geohash string, sex bool) []model.Profile
+type GeoStorage interface {
+	GetProfilesByGeohash(geohash string, gender model.Gender) []model.Profile
 }
 
 type ReactionServiceClient interface {
@@ -22,25 +22,31 @@ type ReactionServiceClient interface {
 }
 
 type geoService struct {
-	storage               GetStorage
-	reactionServiceClient ReactionServiceClient
+	storage        GeoStorage
+	reactionClient ReactionServiceClient
 }
 
-func (f geoService) GetFeed(ctx context.Context, profile_id int64, lat, lng float64) []model.Profile {
-	// todo:
-	sex := true
+func NewGeoService(storage GeoStorage, reactionClient ReactionServiceClient) *geoService {
+	return &geoService{storage: storage, reactionClient: reactionClient}
+}
 
+func (g geoService) GetProfilesByLocation(ctx context.Context, profile_id int64, gender model.Gender, lat, lng float64) []model.Profile {
 	// todo: use ctx
 
 	hash := geohash.EncodeWithPrecision(lat, lng, precision)
-	geoProfiles := f.storage.GetProfilesByGeohash(hash, sex)
-	reactedProfiles := f.reactionServiceClient.GetReactedProfiles(profile_id)
+	geoProfiles := g.storage.GetProfilesByGeohash(hash, gender)
+	reactedProfiles := g.reactionClient.GetReactedProfiles(profile_id)
 
 	sort.Sort(model.ProfilesSortable(geoProfiles))
 	sort.Sort(model.ProfilesSortable(reactedProfiles))
 
-	result := f.findIntersection(geoProfiles, reactedProfiles)
+	result := g.findIntersection(geoProfiles, reactedProfiles)
 	return result
+}
+
+func (g geoService) ChangeLocation(ctx context.Context, profile_id int64, lat, lng float64) error {
+	// save to mongo
+	panic("not implemented")
 }
 
 // find intersection by hash algorithm

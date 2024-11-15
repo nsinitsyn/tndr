@@ -8,6 +8,7 @@ import (
 	"tinder-geo/internal/config"
 	"tinder-geo/internal/server"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
@@ -19,13 +20,19 @@ import (
 	"google.golang.org/grpc/status"
 )
 
+type userClaims struct {
+	ProfileId string `json:"ProfileId"`
+	Gender    string `json:"Gender"`
+	jwt.StandardClaims
+}
+
 type GRPCServer struct {
 	serv   *grpc.Server
 	config *config.GRPCConfig
 	logger *slog.Logger
 }
 
-func NewGRPCServer(config *config.GRPCConfig, logger *slog.Logger) *GRPCServer {
+func NewGRPCServer(config *config.GRPCConfig, logger *slog.Logger, service server.Service) *GRPCServer {
 	loggingOpts := []logging.Option{
 		logging.WithLogOnEvents(
 			logging.StartCall,
@@ -52,7 +59,7 @@ func NewGRPCServer(config *config.GRPCConfig, logger *slog.Logger) *GRPCServer {
 	))
 	reflection.Register(grpcServer)
 
-	server.Register(grpcServer)
+	server.Register(grpcServer, service)
 
 	return &GRPCServer{
 		serv:   grpcServer,
@@ -93,11 +100,19 @@ func authenticator(ctx context.Context) (context.Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	// TODO: This is example only, perform proper Oauth/OIDC verification!
-	if token != "test" {
+	parsedToken, _ := jwt.ParseWithClaims(token, &userClaims{}, func(token *jwt.Token) (interface{}, error) {
+		// todo: move to secret file
+		return []byte("fjg847sdjvnjxcFHdsag38d_d8sj3aqQwfdsph3456v0bjz45ty54gpo3vhjs7234f09Odp"), nil
+	})
+
+	claims := parsedToken.Claims.(*userClaims)
+
+	if !parsedToken.Valid {
 		return nil, status.Error(codes.Unauthenticated, "invalid auth token")
 	}
-	// NOTE: You can also pass the token in the context for further interceptors or gRPC service code.
+
+	ctx = context.WithValue(ctx, server.ProfileIdCtxKey, claims.ProfileId)
+	ctx = context.WithValue(ctx, server.GenderCtxKey, claims.Gender)
 	return ctx, nil
 }
 

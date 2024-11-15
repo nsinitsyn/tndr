@@ -5,15 +5,16 @@ package tinder;
 option go_package = "./;tinderpbv1";
 
 service GeoService {
-    rpc GetFeedByLocation (GetFeedByLocationRequest) returns (GetFeedByLocationResponse);
+    rpc GetProfilesByLocation (GetProfilesByLocationRequest) returns (GetProfilesByLocationResponse);
     rpc ChangeLocation (ChangeLocationRequest) returns (ChangeLocationResponse);
 }
 
-message GetFeedByLocationRequest {
-    int64 geo_zone_id = 1;
+message GetProfilesByLocationRequest {
+    double latitude = 1;
+    double longitude = 2;
 }
 
-message GetFeedByLocationResponse {
+message GetProfilesByLocationResponse {
     repeated LocationProfileDto profiles = 1;
     oneof error {
         NoNewProfilesError no_new_profiles = 2;
@@ -28,7 +29,8 @@ message LocationProfileDto {
 }
 
 message ChangeLocationRequest {
-    int64 geo_zone_id = 1;
+    double latitude = 1;
+    double longitude = 2;
 }
 
 message ChangeLocationResponse {

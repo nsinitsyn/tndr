@@ -6,6 +6,10 @@ import (
 	"os"
 	"tinder-geo/internal/app/setup"
 	"tinder-geo/internal/config"
+	"tinder-geo/internal/infrastructure/clients"
+	"tinder-geo/internal/infrastructure/database"
+	"tinder-geo/internal/server"
+	"tinder-geo/internal/services/geo"
 )
 
 const (
@@ -20,7 +24,11 @@ func Run() error {
 	logger := setupLogger(config.Env)
 	_ = logger
 
-	if err := runGRPCServer(&config.GRPC, logger); err != nil {
+	storage := database.NewGeoStorage()
+	reactionClient := clients.NewReactionServiceClient()
+	geoService := geo.NewGeoService(storage, reactionClient)
+
+	if err := runGRPCServer(&config.GRPC, logger, geoService); err != nil {
 		log.Fatal(err)
 	}
 
@@ -29,8 +37,8 @@ func Run() error {
 
 // grpcurl -plaintext 172.24.48.1:2342 list tinder.GeoService
 // grpcurl -plaintext -d '{"geo_zone_id":5}' 172.24.48.1:2342 tinder.GeoService/GetFeedByLocation
-func runGRPCServer(config *config.GRPCConfig, logger *slog.Logger) error {
-	serv := setup.NewGRPCServer(config, logger)
+func runGRPCServer(config *config.GRPCConfig, logger *slog.Logger, geoService server.Service) error {
+	serv := setup.NewGRPCServer(config, logger, geoService)
 	if err := serv.Run(); err != nil {
 		return err
 	}
