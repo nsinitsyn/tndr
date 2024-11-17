@@ -1,16 +1,24 @@
 package main
 
 import (
-	"log"
 	"tinder-geo/internal/app"
 )
 
 // $env:CONFIG_PATH = '././config/config.yaml'; go run cmd/tinder-geo/main.go
 
+// with kafka:
+// $env:CONFIG_PATH = '././config/config.yaml'; $env:CGO_ENABLED=1; $env:CC="C:\TDM-GCC-64\bin\gcc"; go run cmd/tinder-geo/main.go
+
+// kafka client readme:
+// https://github.com/confluentinc/confluent-kafka-go/blob/master/README.md#getting-started
+
+// tdm-gcc:
+// https://github.com/mattn/go-sqlite3/issues/168#issuecomment-1528722456
+// https://github.com/jmeubank/tdm-gcc
+// https://jmeubank.github.io/tdm-gcc/download/
+
 func main() {
-	if err := app.Run(); err != nil {
-		log.Fatal(err)
-	}
+	app.Run()
 
 	// code := geohash.EncodeWithPrecision(55.7893, 37.7717, 5)
 	// fmt.Println(code)
@@ -21,6 +29,11 @@ func main() {
 	// // match service http client - 100 ошибок go - как закрывать body http клиентов правильно
 	// // business logic - searching nearby profiles by geohash
 	// // observability - 2 видео art of development
-	// // graceful shutdown
 	// // tests
+	// // alive, ready endpoints
+	// // retry и circuit breaker к внешним системам
+
+	// Логирование в файл
+	// Валидация grpc запросов
+	// Настроить таймауты в grpc сервере
 }

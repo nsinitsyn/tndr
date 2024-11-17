@@ -9,7 +9,10 @@ public class MessageSerializer : ISerializer<ProfileUpdatedMessage>
 {
     public byte[] Serialize(ProfileUpdatedMessage data, SerializationContext context)
     {
-        var options = new JsonSerializerOptions();
+        var options = new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower
+        };
         options.Converters.Add(new JsonStringEnumConverter());
         
         return JsonSerializer.SerializeToUtf8Bytes(data, options);

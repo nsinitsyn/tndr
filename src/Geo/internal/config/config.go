@@ -12,8 +12,9 @@ import (
 type Config struct {
 	Env             string              `yaml:"env" env-required:"true"`
 	GRPC            GRPCConfig          `yaml:"grpc" env-required:"true"`
-	DB              DBConfig            `yaml:"db" env-required:"true"`
+	Storage         StorageConfig       `yaml:"storage" env-required:"true"`
 	ReactionService RemoteServiceConfig `yaml:"reaction_service" env-required:"true"`
+	Messaging       MessagingConfig     `yaml:"messaging" env-required:"true"`
 }
 
 type GRPCConfig struct {
@@ -21,12 +22,20 @@ type GRPCConfig struct {
 	Timeout time.Duration `yaml:"timeout" env-required:"true"`
 }
 
-type DBConfig struct {
-	ConnectionString string `yaml:"connection_string" env-required:"true"`
+type StorageConfig struct {
+	Addr     string `yaml:"addr" env-required:"true"`
+	Password string `yaml:"password" env-default:""`
+	DB       int    `yaml:"db" env-default:"0"`
 }
 
 type RemoteServiceConfig struct {
 	URL string `yaml:"url" env-required:"true"`
+}
+
+type MessagingConfig struct {
+	Servers string `yaml:"servers" env-required:"true"`
+	Group   string `yaml:"group" env-required:"true"`
+	Topic   string `yaml:"topic" env-required:"true"`
 }
 
 var instance *Config

@@ -1,7 +1,6 @@
 package clients
 
 import (
-	"tinder-geo/internal/domain/model"
 	"tinder-geo/internal/services"
 )
 
@@ -14,6 +13,6 @@ func NewReactionServiceClient() *reactionServiceClient {
 	return &reactionServiceClient{}
 }
 
-func (r reactionServiceClient) GetReactedProfiles(profile_id int64) []model.Profile {
+func (r reactionServiceClient) GetReactedProfiles(profile_id int64) []int64 {
 	return nil
 }

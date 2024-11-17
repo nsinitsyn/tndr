@@ -2,7 +2,7 @@
 
 public class ProfileUpdatedMessage
 {
-    public long ProfileId { get; set; }
+    public long Id { get; set; }
     public Gender Gender { get; set; }
     public int Age { get; set; }
     public string Name { get; set; } = null!;

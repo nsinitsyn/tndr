@@ -45,7 +45,7 @@ public class OutboxPublisher : BackgroundService
                 {
                     await _messagingService.Publish(new ProfileUpdatedMessage
                     {
-                        ProfileId = profile.ProfileId,
+                        Id = profile.ProfileId,
                         Gender = profile.Gender,
                         Age = profile.Age,
                         Name = profile.Name,

@@ -44,7 +44,7 @@ func NewGRPCServer(config *config.GRPCConfig, logger *slog.Logger, service serve
 
 	recoveryOpts := []recovery.Option{
 		recovery.WithRecoveryHandler(func(p interface{}) (err error) {
-			logger.Error("Recovered from panic", slog.Any("panic", p))
+			logger.Error("recovered from panic", slog.Any("panic", p))
 			return status.Errorf(codes.Internal, "internal error")
 		}),
 	}
@@ -84,9 +84,9 @@ func (s *GRPCServer) Run() error {
 	return nil
 }
 
-func (s *GRPCServer) Stop() {
-	s.logger.Info("Stopping GRPC server...")
+func (s *GRPCServer) GracefulStop() {
 	s.serv.GracefulStop()
+	s.logger.Info("GRPC server stopped")
 }
 
 func interceptorLogger(logger *slog.Logger) logging.Logger {
@@ -117,6 +117,6 @@ func authenticator(ctx context.Context) (context.Context, error) {
 }
 
 func authMatcher(ctx context.Context, callMeta interceptors.CallMeta) bool {
-	// return healthpb.Health_ServiceDesc.ServiceName != callMeta.Service
+	// todo: return healthpb.Health_ServiceDesc.ServiceName != callMeta.Service
 	return true // Какие методы требуют аутентификацию?
 }

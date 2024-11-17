@@ -2,7 +2,6 @@ package services
 
 import (
 	"context"
-	"sort"
 	"tinder-geo/internal/domain/model"
 	"tinder-geo/internal/infrastructure/server"
 
@@ -11,14 +10,15 @@ import (
 
 var _ server.Service = (*geoService)(nil)
 
-const precision uint = 5
+const PRECISION uint = 5
 
 type GeoStorage interface {
-	GetProfilesByGeohash(geohash string, gender model.Gender) []model.Profile
+	GetProfilesByGeohash(ctx context.Context, geohash string, gender model.Gender) ([]model.Profile, error)
+	UpdateGeohash(ctx context.Context, profileId int64, geohash string) error
 }
 
 type ReactionServiceClient interface {
-	GetReactedProfiles(profile_id int64) []model.Profile
+	GetReactedProfiles(profile_id int64) []int64
 }
 
 type geoService struct {
@@ -33,33 +33,35 @@ func NewGeoService(storage GeoStorage, reactionClient ReactionServiceClient) *ge
 func (g geoService) GetProfilesByLocation(ctx context.Context, profile_id int64, gender model.Gender, lat, lng float64) []model.Profile {
 	// todo: use ctx
 
-	hash := geohash.EncodeWithPrecision(lat, lng, precision)
-	geoProfiles := g.storage.GetProfilesByGeohash(hash, gender)
-	reactedProfiles := g.reactionClient.GetReactedProfiles(profile_id)
+	geohash := geohash.EncodeWithPrecision(lat, lng, PRECISION)
+	geoProfiles, _ := g.storage.GetProfilesByGeohash(ctx, geohash, gender) // todo: err
+	reactedProfilesIds := g.reactionClient.GetReactedProfiles(profile_id)
 
-	sort.Sort(model.ProfilesSortable(geoProfiles))
-	sort.Sort(model.ProfilesSortable(reactedProfiles))
+	// todo: удалить также реализацию интерфейса sort у профиля
+	// sort.Sort(model.ProfilesSortable(geoProfiles))
+	// sort.Sort(model.ProfilesSortable(reactedProfiles))
 
-	result := g.findIntersection(geoProfiles, reactedProfiles)
+	result := g.findIntersection(geoProfiles, reactedProfilesIds)
 	return result
 }
 
-func (g geoService) ChangeLocation(ctx context.Context, profile_id int64, lat, lng float64) error {
-	// save to mongo
-	panic("not implemented")
+func (g geoService) ChangeLocation(ctx context.Context, profileId int64, lat, lng float64) error {
+	geohash := geohash.EncodeWithPrecision(lat, lng, PRECISION)
+	err := g.storage.UpdateGeohash(ctx, profileId, geohash)
+	return err
 }
 
 // find intersection by hash algorithm
-func (f geoService) findIntersection(profiles1 []model.Profile, profiles2 []model.Profile) []model.Profile {
-	m := make(map[int64]struct{}, len(profiles1))
+func (f geoService) findIntersection(profiles []model.Profile, profilesIds []int64) []model.Profile {
+	m := make(map[int64]struct{}, len(profiles))
 
-	result := make([]model.Profile, 0, len(profiles1)/2)
+	result := make([]model.Profile, 0, len(profiles)/2)
 
-	for _, v := range profiles1 {
-		m[v.ID] = struct{}{}
+	for _, id := range profilesIds {
+		m[id] = struct{}{}
 	}
 
-	for _, v := range profiles2 {
+	for _, v := range profiles {
 		_, ok := m[v.ID]
 		if ok {
 			result = append(result, v)

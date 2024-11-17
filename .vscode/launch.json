@@ -11,7 +11,9 @@
             "mode": "debug",
             "program": "${workspaceFolder}/src/Geo/cmd/tinder-geo",
             "env": {
-                "CONFIG_PATH":"../../config/config.yaml"
+                "CONFIG_PATH":"../../config/config.yaml",
+                "CGO_ENABLED":"1",
+                "CC":"C:\\TDM-GCC-64\\bin\\gcc"
             },
         },
         {
