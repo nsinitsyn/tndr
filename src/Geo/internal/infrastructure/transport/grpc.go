@@ -1,4 +1,4 @@
-package setup
+package transport
 
 import (
 	"context"
@@ -6,7 +6,7 @@ import (
 	"log/slog"
 	"net"
 	"tinder-geo/internal/config"
-	"tinder-geo/internal/infrastructure/server"
+	"tinder-geo/internal/server"
 
 	"github.com/golang-jwt/jwt"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors"
@@ -16,6 +16,8 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/health"
+	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
@@ -26,13 +28,13 @@ type userClaims struct {
 	jwt.StandardClaims
 }
 
-type GRPCServer struct {
+type Server struct {
 	serv   *grpc.Server
 	config *config.GRPCConfig
 	logger *slog.Logger
 }
 
-func NewGRPCServer(config *config.GRPCConfig, logger *slog.Logger, service server.Service) *GRPCServer {
+func NewServer(config *config.GRPCConfig, logger *slog.Logger, service server.Service) *Server {
 	loggingOpts := []logging.Option{
 		logging.WithLogOnEvents(
 			logging.StartCall,
@@ -60,15 +62,16 @@ func NewGRPCServer(config *config.GRPCConfig, logger *slog.Logger, service serve
 	reflection.Register(grpcServer)
 
 	server.Register(grpcServer, service)
+	grpc_health_v1.RegisterHealthServer(grpcServer, health.NewServer())
 
-	return &GRPCServer{
+	return &Server{
 		serv:   grpcServer,
 		config: config,
 		logger: logger,
 	}
 }
 
-func (s *GRPCServer) Run() error {
+func (s *Server) Run() error {
 	s.logger.Info("GRPC server is running", slog.Int("port", s.config.Port))
 
 	list, err := net.Listen("tcp", fmt.Sprintf(":%d", s.config.Port))
@@ -84,7 +87,7 @@ func (s *GRPCServer) Run() error {
 	return nil
 }
 
-func (s *GRPCServer) GracefulStop() {
+func (s *Server) GracefulStop() {
 	s.serv.GracefulStop()
 	s.logger.Info("GRPC server stopped")
 }
@@ -117,6 +120,5 @@ func authenticator(ctx context.Context) (context.Context, error) {
 }
 
 func authMatcher(ctx context.Context, callMeta interceptors.CallMeta) bool {
-	// todo: return healthpb.Health_ServiceDesc.ServiceName != callMeta.Service
-	return true // Какие методы требуют аутентификацию?
+	return grpc_health_v1.Health_ServiceDesc.ServiceName != callMeta.Service
 }

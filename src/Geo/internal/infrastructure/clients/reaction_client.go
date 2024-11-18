@@ -14,5 +14,6 @@ func NewReactionServiceClient() *reactionServiceClient {
 }
 
 func (r reactionServiceClient) GetReactedProfiles(profile_id int64) []int64 {
-	return nil
+	// not implemented yet - return empty slice
+	return []int64{}
 }

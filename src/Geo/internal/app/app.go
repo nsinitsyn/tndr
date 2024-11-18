@@ -8,15 +8,16 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
-	"tinder-geo/internal/app/setup"
 	"tinder-geo/internal/config"
 	"tinder-geo/internal/infrastructure/clients"
 	"tinder-geo/internal/infrastructure/messaging"
 	"tinder-geo/internal/infrastructure/storage"
+	"tinder-geo/internal/infrastructure/transport"
 	"tinder-geo/internal/services"
 )
 
 const GRACEFUL_SHUTDOWN_TIMEOUT_SEC = 10
+const CONSUMING_START_TIMEOUT_SEC = 15
 
 const (
 	envLocal = "local"
@@ -30,25 +31,34 @@ func Run() {
 	logger := setupLogger(config.Env)
 	_ = logger
 
+	logger.Info("start...")
+
 	storage := storage.NewGeoStorage(&config.Storage)
 	reactionServiceClient := clients.NewReactionServiceClient()
 	service := services.NewGeoService(storage, reactionServiceClient)
 	consumer := messaging.NewConsumer(config.Messaging, logger, storage)
-	// todo: заменить setup!!!
-	grpcServer := setup.NewGRPCServer(&config.GRPC, logger, service)
+	server := transport.NewServer(&config.GRPC, logger, service)
 
 	ctx, cancel := context.WithCancel(context.Background())
+	consumingStarted := make(chan struct{})
 	consumingShutdown := make(chan struct{})
 	go func() {
-		if err := consumer.StartConsume(ctx); err != nil {
+		if err := consumer.StartConsume(ctx, consumingStarted); err != nil {
 			log.Fatal(err)
 		}
-		logger.Info("consuming messaging stopped")
+		logger.Info("consuming stopped")
 		close(consumingShutdown)
 	}()
 
+	select {
+	case <-consumingStarted:
+		break
+	case <-time.After(CONSUMING_START_TIMEOUT_SEC * time.Second):
+		log.Fatal("consuming start timeout expired")
+	}
+
 	go func() {
-		if err := grpcServer.Run(); err != nil {
+		if err := server.Run(); err != nil {
 			log.Fatal(err)
 		}
 	}()
@@ -62,7 +72,7 @@ func Run() {
 
 	serverShutdown := make(chan struct{})
 	go func() {
-		grpcServer.GracefulStop()
+		server.GracefulStop()
 		close(serverShutdown)
 	}()
 
@@ -81,7 +91,7 @@ func Run() {
 		}
 	}
 
-	logger.Info("stopped")
+	logger.Info("application stopped")
 }
 
 func setupLogger(env string) *slog.Logger {

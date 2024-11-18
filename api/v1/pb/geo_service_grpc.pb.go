@@ -19,15 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	GeoService_GetFeedByLocation_FullMethodName = "/tinder.GeoService/GetFeedByLocation"
-	GeoService_ChangeLocation_FullMethodName    = "/tinder.GeoService/ChangeLocation"
+	GeoService_GetProfilesByLocation_FullMethodName = "/tinder.GeoService/GetProfilesByLocation"
+	GeoService_ChangeLocation_FullMethodName        = "/tinder.GeoService/ChangeLocation"
 )
 
 // GeoServiceClient is the client API for GeoService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type GeoServiceClient interface {
-	GetFeedByLocation(ctx context.Context, in *GetFeedByLocationRequest, opts ...grpc.CallOption) (*GetFeedByLocationResponse, error)
+	GetProfilesByLocation(ctx context.Context, in *GetProfilesByLocationRequest, opts ...grpc.CallOption) (*GetProfilesByLocationResponse, error)
 	ChangeLocation(ctx context.Context, in *ChangeLocationRequest, opts ...grpc.CallOption) (*ChangeLocationResponse, error)
 }
 
@@ -39,10 +39,10 @@ func NewGeoServiceClient(cc grpc.ClientConnInterface) GeoServiceClient {
 	return &geoServiceClient{cc}
 }
 
-func (c *geoServiceClient) GetFeedByLocation(ctx context.Context, in *GetFeedByLocationRequest, opts ...grpc.CallOption) (*GetFeedByLocationResponse, error) {
+func (c *geoServiceClient) GetProfilesByLocation(ctx context.Context, in *GetProfilesByLocationRequest, opts ...grpc.CallOption) (*GetProfilesByLocationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(GetFeedByLocationResponse)
-	err := c.cc.Invoke(ctx, GeoService_GetFeedByLocation_FullMethodName, in, out, cOpts...)
+	out := new(GetProfilesByLocationResponse)
+	err := c.cc.Invoke(ctx, GeoService_GetProfilesByLocation_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +63,7 @@ func (c *geoServiceClient) ChangeLocation(ctx context.Context, in *ChangeLocatio
 // All implementations must embed UnimplementedGeoServiceServer
 // for forward compatibility.
 type GeoServiceServer interface {
-	GetFeedByLocation(context.Context, *GetFeedByLocationRequest) (*GetFeedByLocationResponse, error)
+	GetProfilesByLocation(context.Context, *GetProfilesByLocationRequest) (*GetProfilesByLocationResponse, error)
 	ChangeLocation(context.Context, *ChangeLocationRequest) (*ChangeLocationResponse, error)
 	mustEmbedUnimplementedGeoServiceServer()
 }
@@ -75,8 +75,8 @@ type GeoServiceServer interface {
 // pointer dereference when methods are called.
 type UnimplementedGeoServiceServer struct{}
 
-func (UnimplementedGeoServiceServer) GetFeedByLocation(context.Context, *GetFeedByLocationRequest) (*GetFeedByLocationResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetFeedByLocation not implemented")
+func (UnimplementedGeoServiceServer) GetProfilesByLocation(context.Context, *GetProfilesByLocationRequest) (*GetProfilesByLocationResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetProfilesByLocation not implemented")
 }
 func (UnimplementedGeoServiceServer) ChangeLocation(context.Context, *ChangeLocationRequest) (*ChangeLocationResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ChangeLocation not implemented")
@@ -102,20 +102,20 @@ func RegisterGeoServiceServer(s grpc.ServiceRegistrar, srv GeoServiceServer) {
 	s.RegisterService(&GeoService_ServiceDesc, srv)
 }
 
-func _GeoService_GetFeedByLocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetFeedByLocationRequest)
+func _GeoService_GetProfilesByLocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetProfilesByLocationRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(GeoServiceServer).GetFeedByLocation(ctx, in)
+		return srv.(GeoServiceServer).GetProfilesByLocation(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: GeoService_GetFeedByLocation_FullMethodName,
+		FullMethod: GeoService_GetProfilesByLocation_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(GeoServiceServer).GetFeedByLocation(ctx, req.(*GetFeedByLocationRequest))
+		return srv.(GeoServiceServer).GetProfilesByLocation(ctx, req.(*GetProfilesByLocationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -146,8 +146,8 @@ var GeoService_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*GeoServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
-			MethodName: "GetFeedByLocation",
-			Handler:    _GeoService_GetFeedByLocation_Handler,
+			MethodName: "GetProfilesByLocation",
+			Handler:    _GeoService_GetProfilesByLocation_Handler,
 		},
 		{
 			MethodName: "ChangeLocation",

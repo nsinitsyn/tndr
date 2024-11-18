@@ -45,10 +45,12 @@ message NoNewProfilesError {
 
 }
 
+// todo: remove
 message ProfileIdNotFoundError {
 
 }
 
+// todo: remove
 message GeoZoneIdNotFoundError {
     
 }

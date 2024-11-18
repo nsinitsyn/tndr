@@ -29,7 +29,8 @@ func NewConsumer(config config.MessagingConfig, logger *slog.Logger, storage Geo
 	return &kafkaConsumer{config: config, logger: logger, storage: storage}
 }
 
-func (k kafkaConsumer) StartConsume(ctx context.Context) error {
+func (k kafkaConsumer) StartConsume(ctx context.Context, consumingStarted chan<- struct{}) error {
+	k.logger.Info("start consuming...")
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers":  k.config.Servers,
 		"group.id":           k.config.Group,
@@ -42,8 +43,13 @@ func (k kafkaConsumer) StartConsume(ctx context.Context) error {
 	defer consumer.Close()
 
 	err = consumer.SubscribeTopics([]string{k.config.Topic}, nil)
+	if err != nil {
+		return err
+	}
 
-	k.logger.Info("start consuming...")
+	k.logger.Info("consuming started")
+
+	close(consumingStarted)
 
 	batch := make([]ProfileDto, 0, BATCH_SIZE)
 

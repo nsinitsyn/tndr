@@ -12,6 +12,14 @@ const (
 	F
 )
 
+func (g Gender) String() string {
+	if g == M {
+		return "M"
+	}
+	return "F"
+}
+
+// todo: why pointer?
 func (g *Gender) UnmarshalJSON(data []byte) error {
 	var s string
 
@@ -30,4 +38,15 @@ func (g *Gender) UnmarshalJSON(data []byte) error {
 	}
 
 	return fmt.Errorf("undefined value: %s", s)
+}
+
+func (g Gender) MarshalJSON() ([]byte, error) {
+	return json.Marshal(g.String())
+}
+
+func (g Gender) Invert() Gender {
+	if g == M {
+		return F
+	}
+	return M
 }

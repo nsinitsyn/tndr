@@ -1,0 +1,14 @@
+env: "local"
+grpc:
+  port: 3342
+  timeout: 30s
+storage:
+  addr: "localhost:7379"
+  password: ""
+  db: 0
+reaction_service:
+  url: "http://localhost:2343"
+messaging:
+  servers: "localhost:39092"
+  group: "geo-e2e-test"
+  topic: "profile.updates"

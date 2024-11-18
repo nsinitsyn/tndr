@@ -27,8 +27,6 @@ func NewGeoStorage(config *config.StorageConfig) *geoStorage {
 	return &geoStorage{config: config}
 }
 
-// todo: забыл про gender!
-
 func (s geoStorage) GetProfilesByGeohash(ctx context.Context, geohash string, gender model.Gender) ([]model.Profile, error) {
 	client := redis.NewClient(&redis.Options{
 		Addr:     s.config.Addr,
@@ -37,7 +35,7 @@ func (s geoStorage) GetProfilesByGeohash(ctx context.Context, geohash string, ge
 	})
 	defer client.Close()
 
-	profilesMap, err := client.HGetAll(ctx, fmt.Sprintf("geohash:%s", geohash)).Result()
+	profilesMap, err := client.HGetAll(ctx, fmt.Sprintf("geohash:%s:%s", geohash, gender.String())).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +54,7 @@ func (s geoStorage) GetProfilesByGeohash(ctx context.Context, geohash string, ge
 	return profiles, nil
 }
 
-func (s geoStorage) UpdateGeohash(ctx context.Context, profileId int64, geohash string) error {
+func (s geoStorage) UpdateGeohash(ctx context.Context, profileId int64, gender model.Gender, geohash string) error {
 	client := redis.NewClient(&redis.Options{
 		Addr:     s.config.Addr,
 		Password: s.config.Password,
@@ -69,6 +67,7 @@ func (s geoStorage) UpdateGeohash(ctx context.Context, profileId int64, geohash 
 	if geohash == curGeo {
 		return nil
 	}
+	genderStr := gender.String()
 
 	var versionKey = fmt.Sprintf("profile:version:%d", profileId)
 
@@ -94,16 +93,16 @@ func (s geoStorage) UpdateGeohash(ctx context.Context, profileId int64, geohash 
 				return nil
 			}
 
-			curGeoKey := fmt.Sprintf("geohash:%s", curGeo)
-			newGeoKey := fmt.Sprintf("geohash:%s", geohash)
+			curGeoKey := fmt.Sprintf("geohash:%s:%s", curGeo, genderStr)
+			newGeoKey := fmt.Sprintf("geohash:%s:%s", geohash, genderStr)
+			// Get profile from cur:
+			profile, _ := client.HGet(ctx, curGeoKey, profileIdStr).Result()
 
 			_, err = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
-				// Get profile from cur:
-				profile, _ := pipe.HGet(ctx, curGeoKey, profileIdStr).Result()
-				// Remove profile from cur
-				pipe.HDel(ctx, curGeoKey, profileIdStr)
 				// Add profile to new geohash
 				pipe.HSet(ctx, newGeoKey, profileIdStr, profile)
+				// Remove profile from cur
+				pipe.HDel(ctx, curGeoKey, profileIdStr)
 				// Change index
 				pipe.HSet(ctx, "profiles:geo", profileIdStr, geohash)
 
@@ -114,11 +113,11 @@ func (s geoStorage) UpdateGeohash(ctx context.Context, profileId int64, geohash 
 			return err
 		}, versionKey)
 
-		if err == nil {
-			break
-		}
 		if err == redis.TxFailedErr {
 			continue
+		}
+		if err == nil {
+			return nil
 		}
 		return err
 	}
@@ -135,6 +134,7 @@ func (s geoStorage) UpdateProfile(ctx context.Context, gender model.Gender, prof
 	defer client.Close()
 
 	profileIdStr := strconv.FormatInt(profile.ID, 10)
+	genderStr := gender.String()
 	var versionKey = fmt.Sprintf("profile:version:%d", profile.ID)
 
 	for i := 0; i < MAX_RETRIES; i++ {
@@ -149,10 +149,10 @@ func (s geoStorage) UpdateProfile(ctx context.Context, gender model.Gender, prof
 				return err
 			}
 
-			curGeoKey := fmt.Sprintf("geohash:%s", curGeo)
+			curGeoKey := fmt.Sprintf("geohash:%s:%s", curGeo, genderStr)
 			if err == redis.Nil {
-				// special geohash for store new profiles until geolocation will be received
-				curGeoKey = "geohash:null"
+				// null - is special geohash for store new profiles until geolocation will be received
+				curGeoKey = fmt.Sprintf("geohash:null:%s", genderStr)
 			}
 
 			_, err = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
