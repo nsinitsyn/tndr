@@ -30,11 +30,11 @@ type userClaims struct {
 
 type Server struct {
 	serv   *grpc.Server
-	config *config.GRPCConfig
+	config config.GRPCConfig
 	logger *slog.Logger
 }
 
-func NewServer(config *config.GRPCConfig, logger *slog.Logger, service server.Service) *Server {
+func NewServer(config config.GRPCConfig, logger *slog.Logger, service server.Service) Server {
 	loggingOpts := []logging.Option{
 		logging.WithLogOnEvents(
 			logging.StartCall,
@@ -64,14 +64,14 @@ func NewServer(config *config.GRPCConfig, logger *slog.Logger, service server.Se
 	server.Register(grpcServer, service)
 	grpc_health_v1.RegisterHealthServer(grpcServer, health.NewServer())
 
-	return &Server{
+	return Server{
 		serv:   grpcServer,
 		config: config,
 		logger: logger,
 	}
 }
 
-func (s *Server) Run() error {
+func (s Server) Run() error {
 	s.logger.Info("GRPC server is running", slog.Int("port", s.config.Port))
 
 	list, err := net.Listen("tcp", fmt.Sprintf(":%d", s.config.Port))
@@ -87,7 +87,7 @@ func (s *Server) Run() error {
 	return nil
 }
 
-func (s *Server) GracefulStop() {
+func (s Server) GracefulStop() {
 	s.serv.GracefulStop()
 	s.logger.Info("GRPC server stopped")
 }

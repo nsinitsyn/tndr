@@ -10,8 +10,8 @@ var _ service.ReactionServiceClient = (*reactionServiceClient)(nil)
 type reactionServiceClient struct {
 }
 
-func NewReactionServiceClient() *reactionServiceClient {
-	return &reactionServiceClient{}
+func NewReactionServiceClient() reactionServiceClient {
+	return reactionServiceClient{}
 }
 
 func (r reactionServiceClient) GetReactedProfiles(ctx context.Context, profileId int64) ([]int64, error) {

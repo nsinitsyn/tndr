@@ -18,11 +18,11 @@ const MAX_RETRIES = 10
 var _ service.GeoStorage = (*geoStorage)(nil)
 
 type geoStorage struct {
-	config *config.StorageConfig
+	config config.StorageConfig
 }
 
-func NewGeoStorage(config *config.StorageConfig) *geoStorage {
-	return &geoStorage{config: config}
+func NewGeoStorage(config config.StorageConfig) geoStorage {
+	return geoStorage{config: config}
 }
 
 func (s geoStorage) GetProfilesByGeohash(ctx context.Context, geohash string, gender model.Gender) ([]model.Profile, error) {

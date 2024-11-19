@@ -28,11 +28,11 @@ func Run() (closer func()) {
 	logger := setupLogger(config.Env)
 	logger.Info("start...")
 
-	storage := storage.NewGeoStorage(&config.Storage)
+	storage := storage.NewGeoStorage(config.Storage)
 	reactionServiceClient := client.NewReactionServiceClient()
 	service := service.NewGeoService(storage, reactionServiceClient)
 	consumer := messaging.NewConsumer(config.Messaging, logger, storage)
-	server := transport.NewServer(&config.GRPC, logger, service)
+	server := transport.NewServer(config.GRPC, logger, service)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	consumingStarted := make(chan struct{})

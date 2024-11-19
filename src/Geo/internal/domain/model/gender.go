@@ -19,7 +19,6 @@ func (g Gender) String() string {
 	return "F"
 }
 
-// todo: why pointer?
 func (g *Gender) UnmarshalJSON(data []byte) error {
 	var s string
 

@@ -29,8 +29,8 @@ type geoService struct {
 	reactionClient ReactionServiceClient
 }
 
-func NewGeoService(storage GeoStorage, reactionClient ReactionServiceClient) *geoService {
-	return &geoService{storage: storage, reactionClient: reactionClient}
+func NewGeoService(storage GeoStorage, reactionClient ReactionServiceClient) geoService {
+	return geoService{storage: storage, reactionClient: reactionClient}
 }
 
 func (g geoService) GetProfilesByLocation(ctx context.Context, profileId int64, gender model.Gender, lat, lng float64) ([]model.Profile, error) {

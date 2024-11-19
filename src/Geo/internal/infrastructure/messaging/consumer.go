@@ -26,8 +26,8 @@ type kafkaConsumer struct {
 	service Service
 }
 
-func NewConsumer(config config.MessagingConfig, logger *slog.Logger, service Service) *kafkaConsumer {
-	return &kafkaConsumer{config: config, logger: logger, service: service}
+func NewConsumer(config config.MessagingConfig, logger *slog.Logger, service Service) kafkaConsumer {
+	return kafkaConsumer{config: config, logger: logger, service: service}
 }
 
 func (k kafkaConsumer) StartConsume(ctx context.Context, consumingStarted chan<- struct{}) error {
