@@ -6,11 +6,11 @@ import (
 	"os"
 	"time"
 	"tinder-geo/internal/config"
-	"tinder-geo/internal/infrastructure/clients"
+	"tinder-geo/internal/infrastructure/client"
 	"tinder-geo/internal/infrastructure/messaging"
 	"tinder-geo/internal/infrastructure/storage"
 	"tinder-geo/internal/infrastructure/transport"
-	"tinder-geo/internal/services"
+	"tinder-geo/internal/service"
 )
 
 const GRACEFUL_SHUTDOWN_TIMEOUT_SEC = 10
@@ -29,8 +29,8 @@ func Run() (closer func()) {
 	logger.Info("start...")
 
 	storage := storage.NewGeoStorage(&config.Storage)
-	reactionServiceClient := clients.NewReactionServiceClient()
-	service := services.NewGeoService(storage, reactionServiceClient)
+	reactionServiceClient := client.NewReactionServiceClient()
+	service := service.NewGeoService(storage, reactionServiceClient)
 	consumer := messaging.NewConsumer(config.Messaging, logger, storage)
 	server := transport.NewServer(&config.GRPC, logger, service)
 

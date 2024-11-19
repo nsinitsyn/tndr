@@ -1,4 +1,4 @@
-package messaging
+package dto
 
 import "tinder-geo/internal/domain/model"
 

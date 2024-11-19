@@ -1,11 +1,11 @@
-package clients
+package client
 
 import (
 	"context"
-	"tinder-geo/internal/services"
+	"tinder-geo/internal/service"
 )
 
-var _ services.ReactionServiceClient = (*reactionServiceClient)(nil)
+var _ service.ReactionServiceClient = (*reactionServiceClient)(nil)
 
 type reactionServiceClient struct {
 }

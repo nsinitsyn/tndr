@@ -11,7 +11,7 @@ import (
 	"tinder-geo/api/tinderpbv1"
 	"tinder-geo/internal/app"
 	"tinder-geo/internal/domain/model"
-	"tinder-geo/internal/infrastructure/messaging"
+	"tinder-geo/internal/infrastructure/messaging/dto"
 
 	. "github.com/ahmetb/go-linq/v3"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
@@ -329,7 +329,7 @@ func GenerateToken(id int64, gender model.Gender) (string, error) {
 }
 
 func CreateOrUpdateProfile(id int64, gender model.Gender, p *kafka.Producer, topic string) error {
-	profile := messaging.ProfileDto{}
+	profile := dto.ProfileDto{}
 	profile.ID = id
 	profile.Gender = gender
 	profile.Age = 30

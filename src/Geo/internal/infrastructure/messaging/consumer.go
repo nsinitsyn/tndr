@@ -8,6 +8,7 @@ import (
 	"time"
 	"tinder-geo/internal/config"
 	"tinder-geo/internal/domain/model"
+	"tinder-geo/internal/infrastructure/messaging/dto"
 
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 )
@@ -51,12 +52,12 @@ func (k kafkaConsumer) StartConsume(ctx context.Context, consumingStarted chan<-
 
 	close(consumingStarted)
 
-	batch := make([]ProfileDto, 0, BATCH_SIZE)
+	batch := make([]dto.ProfileDto, 0, BATCH_SIZE)
 
 	for !errors.Is(ctx.Err(), context.Canceled) {
 		msg, err := consumer.ReadMessage(READ_MESSAGE_TIMEOUT_SEC * time.Second)
 		if err == nil {
-			var profileDto ProfileDto
+			var profileDto dto.ProfileDto
 			err := json.Unmarshal(msg.Value, &profileDto)
 			if err != nil {
 				k.logger.Error(
@@ -93,7 +94,7 @@ func (k kafkaConsumer) StartConsume(ctx context.Context, consumingStarted chan<-
 	return nil
 }
 
-func (k kafkaConsumer) processBatch(ctx context.Context, profilesDtos []ProfileDto) {
+func (k kafkaConsumer) processBatch(ctx context.Context, profilesDtos []dto.ProfileDto) {
 	k.logger.Info("start batch processing...")
 	for _, dto := range profilesDtos {
 		profile := model.Profile{

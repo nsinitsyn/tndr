@@ -8,14 +8,14 @@ import (
 	"strconv"
 	"tinder-geo/internal/config"
 	"tinder-geo/internal/domain/model"
-	"tinder-geo/internal/services"
+	"tinder-geo/internal/service"
 
 	"github.com/redis/go-redis/v9"
 )
 
 const MAX_RETRIES = 10
 
-var _ services.GeoStorage = (*geoStorage)(nil)
+var _ service.GeoStorage = (*geoStorage)(nil)
 
 type geoStorage struct {
 	config *config.StorageConfig
