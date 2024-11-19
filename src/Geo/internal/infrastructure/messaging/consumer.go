@@ -15,18 +15,18 @@ import (
 const BATCH_SIZE int = 10
 const READ_MESSAGE_TIMEOUT_SEC = 5
 
-type GeoStorage interface {
+type Service interface {
 	UpdateProfile(ctx context.Context, gender model.Gender, profile model.Profile) error
 }
 
 type kafkaConsumer struct {
 	config  config.MessagingConfig
 	logger  *slog.Logger
-	storage GeoStorage
+	service Service
 }
 
-func NewConsumer(config config.MessagingConfig, logger *slog.Logger, storage GeoStorage) *kafkaConsumer {
-	return &kafkaConsumer{config: config, logger: logger, storage: storage}
+func NewConsumer(config config.MessagingConfig, logger *slog.Logger, service Service) *kafkaConsumer {
+	return &kafkaConsumer{config: config, logger: logger, service: service}
 }
 
 func (k kafkaConsumer) StartConsume(ctx context.Context, consumingStarted chan<- struct{}) error {
@@ -104,9 +104,9 @@ func (k kafkaConsumer) processBatch(ctx context.Context, profilesDtos []ProfileD
 			Photos:      dto.Photos,
 		}
 
-		err := k.storage.UpdateProfile(ctx, dto.Gender, profile)
+		err := k.service.UpdateProfile(ctx, dto.Gender, profile)
 		if err != nil {
-			k.logger.Error("error updating profile in storage", slog.Any("error", err))
+			k.logger.Error("error updating profile", slog.Any("error", err))
 			// todo: publish to dead letter queue...
 		}
 	}

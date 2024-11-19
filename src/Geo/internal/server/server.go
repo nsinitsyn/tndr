@@ -16,7 +16,7 @@ const ProfileIdCtxKey ContextKey = "profileId"
 const GenderCtxKey ContextKey = "gender"
 
 type Service interface {
-	GetProfilesByLocation(ctx context.Context, profileId int64, gender model.Gender, lat, lng float64) []model.Profile // todo: model or dto?
+	GetProfilesByLocation(ctx context.Context, profileId int64, gender model.Gender, lat, lng float64) ([]model.Profile, error)
 	ChangeLocation(ctx context.Context, profileId int64, gender model.Gender, lat, lng float64) error
 }
 
@@ -41,7 +41,11 @@ func (s *geoServer) GetProfilesByLocation(ctx context.Context, req *tinderpbv1.G
 		return &tinderpbv1.GetProfilesByLocationResponse{}, err
 	}
 
-	profiles := s.service.GetProfilesByLocation(ctx, profileId, gender, req.Latitude, req.Longitude)
+	profiles, err := s.service.GetProfilesByLocation(ctx, profileId, gender, req.Latitude, req.Longitude)
+	if err != nil {
+		return &tinderpbv1.GetProfilesByLocationResponse{}, err
+	}
+
 	profilesDtos := make([]*tinderpbv1.LocationProfileDto, 0, len(profiles))
 	for _, v := range profiles {
 		profilesDtos = append(profilesDtos, &tinderpbv1.LocationProfileDto{

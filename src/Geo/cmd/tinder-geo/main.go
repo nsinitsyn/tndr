@@ -29,26 +29,17 @@ func main() {
 	<-stop
 	closer()
 
-	// code := geohash.EncodeWithPrecision(55.7893, 37.7717, 5)
-	// fmt.Println(code)
-	// // clean arh: app в коде Олега Козырева и видео art of development
-	// // grpc server
-	// // kafka client
-	// // mongo client
-	// // match service http client - 100 ошибок go - как закрывать body http клиентов правильно
-	// // business logic - searching nearby profiles by geohash
-	// // observability - 2 видео art of development
-	// // tests
-	// // alive, ready endpoints
-	// // retry и circuit breaker к внешним системам
-
-	// todo: messaging должен обращаться к сервису, а не к стораджу!
+	// match service http client - 100 ошибок go - как закрывать body http клиентов правильно
+	// observability - 2 видео art of development
+	// tests
+	// alive, ready endpoints
+	// retry и circuit breaker к внешним системам
 
 	// Пересмотреть где для сервисов использовать указатели, а где нет. Лучше по возможности все передавать и отдавать по значению, особенно возвращать интерфейсы из функций - переделать.
 
 	// Логирование в файл
 	// Валидация grpc запросов
-	// Настроить таймауты в grpc сервере
+	// Настроить таймауты в grpc сервере и keepAlive
 
 	// feature: remove profile
 }

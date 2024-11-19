@@ -1,6 +1,7 @@
 package clients
 
 import (
+	"context"
 	"tinder-geo/internal/services"
 )
 
@@ -13,7 +14,7 @@ func NewReactionServiceClient() *reactionServiceClient {
 	return &reactionServiceClient{}
 }
 
-func (r reactionServiceClient) GetReactedProfiles(profile_id int64) []int64 {
+func (r reactionServiceClient) GetReactedProfiles(ctx context.Context, profileId int64) ([]int64, error) {
 	// not implemented yet - return empty slice
-	return []int64{}
+	return []int64{}, nil
 }
