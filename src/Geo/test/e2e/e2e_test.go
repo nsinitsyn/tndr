@@ -16,6 +16,7 @@ import (
 	. "github.com/ahmetb/go-linq/v3"
 	"github.com/confluentinc/confluent-kafka-go/kafka"
 	"github.com/golang-jwt/jwt"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	tc "github.com/testcontainers/testcontainers-go/modules/compose"
@@ -28,77 +29,43 @@ import (
 // go test -v -count=1 .
 
 const SECRET_KEY string = "fjg847sdjvnjxcFHdsag38d_d8sj3aqQwfdsph3456v0bjz45ty54gpo3vhjs7234f09Odp"
+const TOPIC string = "profile.updates"
 
 // todo:
-// add test with concurrently grpc calls and kafka messages
 // add test with updating profile
 
 /*
 Test steps:
-1. Runs redis and kafka using docker-compose.yml.
-2. Runs app including grpc server using app.Run() call.
-3. Creates profiles and set locations using kafka producer and grpc client.
-4. Gets profiles using grpc call and check them.
+1. Runs infrastructure
+2. Creates profiles and set locations using kafka producer and grpc client.
+3. Gets profiles using grpc call and check them.
 */
 func TestGetProfiles(t *testing.T) {
-	compose, err := tc.NewDockerCompose("testdata/docker-compose.yml")
-	require.NoError(t, err, "NewDockerComposeAPI()")
+	ctx, producer, client := runInfrastructure(t)
 
-	t.Cleanup(func() {
-		require.NoError(t, compose.Down(context.Background(), tc.RemoveOrphans(true), tc.RemoveImagesLocal), "compose.Down()")
-	})
+	var users []userInfo = []userInfo{
+		{ID: 1, Gender: model.M, Location: locations[0][0]},
+		{ID: 2, Gender: model.M, Location: locations[1][0]},
+		{ID: 3, Gender: model.M, Location: locations[2][0]},
+		{ID: 4, Gender: model.M, Location: locations[2][1]},
+		{ID: 5, Gender: model.F, Location: locations[0][0]},
+		{ID: 6, Gender: model.F, Location: locations[0][1]},
+		{ID: 7, Gender: model.F, Location: locations[2][0]},
+		{ID: 8, Gender: model.F, Location: locations[2][1]},
+	}
 
-	ctx, cancel := context.WithCancel(context.Background())
-	t.Cleanup(cancel)
-
-	require.NoError(t, compose.Up(ctx, tc.Wait(true)), "compose.Up()")
-
-	bootstrapServers := "localhost:39092"
-	topic := "profile.updates"
-
-	admin, err := kafka.NewAdminClient(&kafka.ConfigMap{"bootstrap.servers": bootstrapServers})
-	require.NoError(t, err)
-
-	_, err = admin.CreateTopics(ctx, []kafka.TopicSpecification{{
-		Topic:             topic,
-		NumPartitions:     1,
-		ReplicationFactor: 1}})
-	require.NoError(t, err)
-
-	t.Setenv("CONFIG_PATH", "testdata/config.yaml")
-
-	go app.Run()
-
-	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": bootstrapServers})
-	require.NoError(t, err)
-
-	conn, err := grpc.NewClient("localhost:3342", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	require.NoError(t, err)
-
-	// Check grpc server
-	err = retry(func() error {
-		grpcHealthClient := grpc_health_v1.NewHealthClient(conn)
-		resp, err := grpcHealthClient.Check(ctx, &grpc_health_v1.HealthCheckRequest{})
-		if resp.Status != grpc_health_v1.HealthCheckResponse_SERVING {
-			return fmt.Errorf("failed: %w", err)
-		}
-		return nil
-	}, 5, 1*time.Second)
-	require.NoError(t, err)
-
-	client := tinderpbv1.NewGeoServiceClient(conn)
-
+	var err error
 	for i, u := range users {
 		users[i].Token, err = GenerateToken(u.ID, u.Gender)
 		require.NoError(t, err)
 
 		// Create profile using kafka
-		err = CreateProfile(u.ID, u.Gender, p, topic)
+		err = CreateOrUpdateProfile(u.ID, u.Gender, producer, TOPIC)
 		require.NoError(t, err)
 	}
 
 	// Wait kafka processing
-	// todo: warning: flaky test! Change to topic offset check instead of time.Sleep
+	// todo: warning: flaky test! Check topic offset instead of time.Sleep
 	time.Sleep(15 * time.Second)
 
 	// Set users locations using GRPC call
@@ -115,32 +82,25 @@ func TestGetProfiles(t *testing.T) {
 		{
 			ID:          1,
 			ProfilesIds: []int64{5, 6},
-		},
-		{
+		}, {
 			ID:          2,
 			ProfilesIds: []int64{},
-		},
-		{
+		}, {
 			ID:          3,
 			ProfilesIds: []int64{7, 8},
-		},
-		{
+		}, {
 			ID:          4,
 			ProfilesIds: []int64{7, 8},
-		},
-		{
+		}, {
 			ID:          5,
 			ProfilesIds: []int64{1},
-		},
-		{
+		}, {
 			ID:          6,
 			ProfilesIds: []int64{1},
-		},
-		{
+		}, {
 			ID:          7,
 			ProfilesIds: []int64{3, 4},
-		},
-		{
+		}, {
 			ID:          8,
 			ProfilesIds: []int64{3, 4},
 		},
@@ -161,6 +121,162 @@ func TestGetProfiles(t *testing.T) {
 
 		assert.ElementsMatch(t, exp.ProfilesIds, actualIds)
 	}
+}
+
+// go test -run ^TestConcurrentUpdates$ -v -count=1 .
+func TestConcurrentUpdates(t *testing.T) {
+	ctx, producer, client := runInfrastructure(t)
+
+	var users []userInfo = []userInfo{
+		{ID: 1, Gender: model.M, Location: locations[0][0]},
+		{ID: 2, Gender: model.F, Location: locations[1][0]},
+	}
+
+	var err error
+	for i, u := range users {
+		users[i].Token, err = GenerateToken(u.ID, u.Gender)
+		require.NoError(t, err)
+
+		// Create profile using kafka
+		err = CreateOrUpdateProfile(u.ID, u.Gender, producer, TOPIC)
+		require.NoError(t, err)
+	}
+
+	// Wait kafka processing
+	// todo: warning: flaky test! Check topic offset instead of time.Sleep
+	time.Sleep(15 * time.Second)
+
+	calls := []func(){func() {
+		err = CreateOrUpdateProfile(users[0].ID, users[0].Gender, producer, TOPIC)
+		require.NoError(t, err)
+	}, func() {
+		err = UpdateLocation(ctx, users[0].Token, users[0].Location.Latitude, users[0].Location.Longitude, client)
+		require.NoError(t, err)
+	}, func() {
+		err = UpdateLocation(ctx, users[0].Token, users[0].Location.Latitude, users[0].Location.Longitude, client)
+		require.NoError(t, err)
+	}, func() {
+		err = CreateOrUpdateProfile(users[0].ID, users[0].Gender, producer, TOPIC)
+		require.NoError(t, err)
+	}, func() {
+		err = CreateOrUpdateProfile(users[0].ID, users[0].Gender, producer, TOPIC)
+		require.NoError(t, err)
+	}, func() {
+		err = CreateOrUpdateProfile(users[1].ID, users[1].Gender, producer, TOPIC)
+		require.NoError(t, err)
+	}, func() {
+		err = CreateOrUpdateProfile(users[1].ID, users[1].Gender, producer, TOPIC)
+		require.NoError(t, err)
+	}, func() {
+		err = UpdateLocation(ctx, users[1].Token, users[1].Location.Latitude, users[1].Location.Longitude, client)
+		require.NoError(t, err)
+	}, func() {
+		err = UpdateLocation(ctx, users[1].Token, users[1].Location.Latitude, users[1].Location.Longitude, client)
+		require.NoError(t, err)
+	}, func() {
+		err = UpdateLocation(ctx, users[0].Token, users[0].Location.Latitude, users[0].Location.Longitude, client)
+		require.NoError(t, err)
+	}, func() {
+		err = UpdateLocation(ctx, users[0].Token, users[0].Location.Latitude, users[0].Location.Longitude, client)
+		require.NoError(t, err)
+	}, func() {
+		err = UpdateLocation(ctx, users[0].Token, users[0].Location.Latitude, users[0].Location.Longitude, client)
+		require.NoError(t, err)
+	}, func() {
+		err = UpdateLocation(ctx, users[1].Token, users[1].Location.Latitude, users[1].Location.Longitude, client)
+		require.NoError(t, err)
+	}, func() {
+		err = UpdateLocation(ctx, users[0].Token, users[0].Location.Latitude, users[0].Location.Longitude, client)
+		require.NoError(t, err)
+	}, func() {
+		err = CreateOrUpdateProfile(users[0].ID, users[0].Gender, producer, TOPIC)
+		require.NoError(t, err)
+	}, func() {
+		err = UpdateLocation(ctx, users[0].Token, users[0].Location.Latitude, users[0].Location.Longitude, client)
+		require.NoError(t, err)
+	}, func() {
+		err = CreateOrUpdateProfile(users[0].ID, users[0].Gender, producer, TOPIC)
+		require.NoError(t, err)
+	}}
+
+	for _, fn := range calls {
+		go fn()
+	}
+
+	// Wait kafka processing
+	// todo: warning: flaky test! Check topic offset instead of time.Sleep
+	time.Sleep(15 * time.Second)
+
+	redis := redis.NewClient(&redis.Options{
+		Addr:     "localhost:7379",
+		Password: "",
+		DB:       0,
+	})
+	defer redis.Close()
+
+	user1Version, err := redis.Get(ctx, "profile:version:1").Int()
+	require.NoError(t, err)
+	user2Version, err := redis.Get(ctx, "profile:version:2").Int()
+	require.NoError(t, err)
+
+	assert.Equal(t, user1Version, 13)
+	assert.Equal(t, user2Version, 6)
+}
+
+/*
+1. Runs redis and kafka using docker-compose.yml.
+2. Runs app including grpc server using app.Run() call.
+3. Checks grpc server with healthcheck
+*/
+func runInfrastructure(t *testing.T) (context.Context, *kafka.Producer, tinderpbv1.GeoServiceClient) {
+	compose, err := tc.NewDockerCompose("testdata/docker-compose.yml")
+	require.NoError(t, err, "NewDockerComposeAPI()")
+
+	t.Cleanup(func() {
+		require.NoError(t, compose.Down(context.Background(), tc.RemoveOrphans(true), tc.RemoveImagesLocal), "compose.Down()")
+	})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	t.Cleanup(cancel)
+
+	require.NoError(t, compose.Up(ctx, tc.Wait(true)), "compose.Up()")
+
+	bootstrapServers := "localhost:39092"
+
+	admin, err := kafka.NewAdminClient(&kafka.ConfigMap{"bootstrap.servers": bootstrapServers})
+	require.NoError(t, err)
+
+	_, err = admin.CreateTopics(ctx, []kafka.TopicSpecification{{
+		Topic:             TOPIC,
+		NumPartitions:     1,
+		ReplicationFactor: 1}})
+	require.NoError(t, err)
+
+	t.Setenv("CONFIG_PATH", "testdata/config.yaml")
+
+	closer := app.Run()
+	t.Cleanup(closer)
+
+	producer, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": bootstrapServers})
+	require.NoError(t, err)
+
+	conn, err := grpc.NewClient("localhost:3342", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	require.NoError(t, err)
+
+	// Check grpc server
+	err = retry(func() error {
+		grpcHealthClient := grpc_health_v1.NewHealthClient(conn)
+		resp, err := grpcHealthClient.Check(ctx, &grpc_health_v1.HealthCheckRequest{})
+		if resp.Status != grpc_health_v1.HealthCheckResponse_SERVING {
+			return fmt.Errorf("failed: %w", err)
+		}
+		return nil
+	}, 5, 1*time.Second)
+	require.NoError(t, err)
+
+	client := tinderpbv1.NewGeoServiceClient(conn)
+
+	return ctx, producer, client
 }
 
 func retry(f func() error, attempts int, timeout time.Duration) (err error) {
@@ -195,17 +311,6 @@ var locations [][]location = [][]location{{
 	{51.562, -0.121},
 }}
 
-var users []userInfo = []userInfo{
-	{ID: 1, Gender: model.M, Location: locations[0][0]},
-	{ID: 2, Gender: model.M, Location: locations[1][0]},
-	{ID: 3, Gender: model.M, Location: locations[2][0]},
-	{ID: 4, Gender: model.M, Location: locations[2][1]},
-	{ID: 5, Gender: model.F, Location: locations[0][0]},
-	{ID: 6, Gender: model.F, Location: locations[0][1]},
-	{ID: 7, Gender: model.F, Location: locations[2][0]},
-	{ID: 8, Gender: model.F, Location: locations[2][1]},
-}
-
 type userInfo struct {
 	ID       int64
 	Gender   model.Gender
@@ -223,7 +328,7 @@ func GenerateToken(id int64, gender model.Gender) (string, error) {
 	return token.SignedString(key)
 }
 
-func CreateProfile(id int64, gender model.Gender, p *kafka.Producer, topic string) error {
+func CreateOrUpdateProfile(id int64, gender model.Gender, p *kafka.Producer, topic string) error {
 	profile := messaging.ProfileDto{}
 	profile.ID = id
 	profile.Gender = gender

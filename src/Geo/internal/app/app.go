@@ -2,11 +2,8 @@ package app
 
 import (
 	"context"
-	"log"
 	"log/slog"
 	"os"
-	"os/signal"
-	"syscall"
 	"time"
 	"tinder-geo/internal/config"
 	"tinder-geo/internal/infrastructure/clients"
@@ -25,12 +22,10 @@ const (
 	envProd  = "prod"
 )
 
-func Run() {
+func Run() (closer func()) {
 	config := config.GetConfig()
 
 	logger := setupLogger(config.Env)
-	_ = logger
-
 	logger.Info("start...")
 
 	storage := storage.NewGeoStorage(&config.Storage)
@@ -44,7 +39,8 @@ func Run() {
 	consumingShutdown := make(chan struct{})
 	go func() {
 		if err := consumer.StartConsume(ctx, consumingStarted); err != nil {
-			log.Fatal(err)
+			logger.Error("fatal error", slog.Any("error", err))
+			os.Exit(1)
 		}
 		logger.Info("consuming stopped")
 		close(consumingShutdown)
@@ -54,44 +50,43 @@ func Run() {
 	case <-consumingStarted:
 		break
 	case <-time.After(CONSUMING_START_TIMEOUT_SEC * time.Second):
-		log.Fatal("consuming start timeout expired")
+		logger.Error("fatal error: consuming start timeout expired")
+		os.Exit(1)
 	}
 
 	go func() {
 		if err := server.Run(); err != nil {
-			log.Fatal(err)
+			logger.Error("fatal error", slog.Any("error", err))
+			os.Exit(1)
 		}
 	}()
 
-	// Graceful shutdown
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
-	<-stop
+	return func() {
+		cancel()
 
-	cancel()
+		serverShutdown := make(chan struct{})
+		go func() {
+			server.GracefulStop()
+			close(serverShutdown)
+		}()
 
-	serverShutdown := make(chan struct{})
-	go func() {
-		server.GracefulStop()
-		close(serverShutdown)
-	}()
-
-	timeout := time.After(GRACEFUL_SHUTDOWN_TIMEOUT_SEC * time.Second)
-	stopped := 0
-	for stopped != 2 {
-		select {
-		case <-consumingShutdown:
-			consumingShutdown = nil
-			stopped++
-		case <-serverShutdown:
-			serverShutdown = nil
-			stopped++
-		case <-timeout:
-			stopped = 2
+		timeout := time.After(GRACEFUL_SHUTDOWN_TIMEOUT_SEC * time.Second)
+		stopped := 0
+		for stopped != 2 {
+			select {
+			case <-consumingShutdown:
+				consumingShutdown = nil
+				stopped++
+			case <-serverShutdown:
+				serverShutdown = nil
+				stopped++
+			case <-timeout:
+				stopped = 2
+			}
 		}
+
+		logger.Info("application stopped")
 	}
-
-	logger.Info("application stopped")
 }
 
 func setupLogger(env string) *slog.Logger {

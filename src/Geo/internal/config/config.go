@@ -55,7 +55,3 @@ func GetConfig() *Config {
 	})
 	return instance
 }
-
-// func (config *GRPCConfig) Address() string {
-// 	return net.JoinHostPort(config.Host, strconv.Itoa(config.Port))
-// }

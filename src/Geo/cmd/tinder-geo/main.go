@@ -1,6 +1,9 @@
 package main
 
 import (
+	"os"
+	"os/signal"
+	"syscall"
 	"tinder-geo/internal/app"
 )
 
@@ -18,7 +21,13 @@ import (
 // https://jmeubank.github.io/tdm-gcc/download/
 
 func main() {
-	app.Run()
+	closer := app.Run()
+
+	// Graceful shutdown
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+	<-stop
+	closer()
 
 	// code := geohash.EncodeWithPrecision(55.7893, 37.7717, 5)
 	// fmt.Println(code)
