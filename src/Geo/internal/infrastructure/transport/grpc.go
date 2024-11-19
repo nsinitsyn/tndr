@@ -9,11 +9,13 @@ import (
 	"tinder-geo/internal/server"
 
 	"github.com/golang-jwt/jwt"
+	"github.com/grpc-ecosystem/go-grpc-middleware/providers/prometheus"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/auth"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/logging"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
+	prom "github.com/prometheus/client_golang/prometheus"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
@@ -28,13 +30,13 @@ type userClaims struct {
 	jwt.StandardClaims
 }
 
-type Server struct {
-	serv   *grpc.Server
+type GRPCServer struct {
+	srv    *grpc.Server
 	config config.GRPCConfig
 	logger *slog.Logger
 }
 
-func NewServer(config config.GRPCConfig, logger *slog.Logger, service server.Service) Server {
+func NewGRPCServer(config config.GRPCConfig, logger *slog.Logger, service server.Service, promRegistry *prom.Registry) GRPCServer {
 	loggingOpts := []logging.Option{
 		logging.WithLogOnEvents(
 			logging.StartCall,
@@ -51,7 +53,10 @@ func NewServer(config config.GRPCConfig, logger *slog.Logger, service server.Ser
 		}),
 	}
 
-	grpcServer := grpc.NewServer(grpc.ChainUnaryInterceptor(
+	serverMetrics := prometheus.NewServerMetrics(prometheus.WithServerHandlingTimeHistogram())
+
+	grpcSrv := grpc.NewServer(grpc.ChainUnaryInterceptor(
+		serverMetrics.UnaryServerInterceptor(),
 		recovery.UnaryServerInterceptor(recoveryOpts...),
 		logging.UnaryServerInterceptor(interceptorLogger(logger), loggingOpts...),
 		selector.UnaryServerInterceptor(
@@ -59,19 +64,25 @@ func NewServer(config config.GRPCConfig, logger *slog.Logger, service server.Ser
 			selector.MatchFunc(authMatcher),
 		),
 	))
-	reflection.Register(grpcServer)
 
-	server.Register(grpcServer, service)
-	grpc_health_v1.RegisterHealthServer(grpcServer, health.NewServer())
+	reflection.Register(grpcSrv)
 
-	return Server{
-		serv:   grpcServer,
+	server.Register(grpcSrv, service)
+	grpc_health_v1.RegisterHealthServer(grpcSrv, health.NewServer())
+	serverMetrics.InitializeMetrics(grpcSrv)
+
+	promRegistry.MustRegister(
+		serverMetrics,
+	)
+
+	return GRPCServer{
+		srv:    grpcSrv,
 		config: config,
 		logger: logger,
 	}
 }
 
-func (s Server) Run() error {
+func (s GRPCServer) Run() error {
 	s.logger.Info("GRPC server is running", slog.Int("port", s.config.Port))
 
 	list, err := net.Listen("tcp", fmt.Sprintf(":%d", s.config.Port))
@@ -79,7 +90,7 @@ func (s Server) Run() error {
 		return err
 	}
 
-	err = s.serv.Serve(list)
+	err = s.srv.Serve(list)
 	if err != nil {
 		return err
 	}
@@ -87,8 +98,8 @@ func (s Server) Run() error {
 	return nil
 }
 
-func (s Server) GracefulStop() {
-	s.serv.GracefulStop()
+func (s GRPCServer) GracefulStop() {
+	s.srv.GracefulStop()
 	s.logger.Info("GRPC server stopped")
 }
 

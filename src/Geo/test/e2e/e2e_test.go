@@ -1,3 +1,5 @@
+//go:build e2e
+
 package e2e
 
 import (
@@ -26,7 +28,8 @@ import (
 	"google.golang.org/grpc/metadata"
 )
 
-// go test -v -count=1 .
+// go test -v --tags=e2e -count=1 .
+// go test -v --tags=e2e -count=1 ./...
 
 const SECRET_KEY string = "fjg847sdjvnjxcFHdsag38d_d8sj3aqQwfdsph3456v0bjz45ty54gpo3vhjs7234f09Odp"
 const TOPIC string = "profile.updates"

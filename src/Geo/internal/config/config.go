@@ -12,6 +12,7 @@ import (
 type Config struct {
 	Env             string              `yaml:"env" env-required:"true"`
 	GRPC            GRPCConfig          `yaml:"grpc" env-required:"true"`
+	HTTP            HTTPConfig          `yaml:"http" env-required:"true"`
 	Storage         StorageConfig       `yaml:"storage" env-required:"true"`
 	ReactionService RemoteServiceConfig `yaml:"reaction_service" env-required:"true"`
 	Messaging       MessagingConfig     `yaml:"messaging" env-required:"true"`
@@ -20,6 +21,10 @@ type Config struct {
 type GRPCConfig struct {
 	Port    int           `yaml:"port" env-required:"true"`
 	Timeout time.Duration `yaml:"timeout" env-required:"true"`
+}
+
+type HTTPConfig struct {
+	Port int `yaml:"port" env-required:"true"`
 }
 
 type StorageConfig struct {

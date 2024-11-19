@@ -2,6 +2,8 @@ env: "local"
 grpc:
   port: 3342
   timeout: 30s
+http:
+  port: 3322
 storage:
   addr: "localhost:7379"
   password: ""
