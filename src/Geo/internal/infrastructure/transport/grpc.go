@@ -16,6 +16,7 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/recovery"
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
 	prom "github.com/prometheus/client_golang/prometheus"
+	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
@@ -36,7 +37,12 @@ type GRPCServer struct {
 	logger *slog.Logger
 }
 
-func NewGRPCServer(config config.GRPCConfig, logger *slog.Logger, service server.Service, promRegistry *prom.Registry) GRPCServer {
+func NewGRPCServer(
+	config config.GRPCConfig,
+	logger *slog.Logger,
+	service server.Service,
+	promRegistry *prom.Registry,
+	enableTracing bool) GRPCServer {
 	loggingOpts := []logging.Option{
 		logging.WithLogOnEvents(
 			logging.StartCall,
@@ -55,16 +61,23 @@ func NewGRPCServer(config config.GRPCConfig, logger *slog.Logger, service server
 
 	serverMetrics := prometheus.NewServerMetrics(prometheus.WithServerHandlingTimeHistogram())
 
-	grpcSrv := grpc.NewServer(grpc.ChainUnaryInterceptor(
-		serverMetrics.UnaryServerInterceptor(),
-		recovery.UnaryServerInterceptor(recoveryOpts...),
-		logging.UnaryServerInterceptor(interceptorLogger(logger), loggingOpts...),
-		selector.UnaryServerInterceptor(
-			auth.UnaryServerInterceptor(authenticator),
-			selector.MatchFunc(authMatcher),
+	options := []grpc.ServerOption{
+		grpc.ChainUnaryInterceptor(
+			serverMetrics.UnaryServerInterceptor(),
+			recovery.UnaryServerInterceptor(recoveryOpts...),
+			logging.UnaryServerInterceptor(interceptorLogger(logger), loggingOpts...),
+			selector.UnaryServerInterceptor(
+				auth.UnaryServerInterceptor(authenticator),
+				selector.MatchFunc(authMatcher),
+			),
 		),
-	))
+	}
 
+	if enableTracing {
+		options = append(options, grpc.StatsHandler(otelgrpc.NewServerHandler()))
+	}
+
+	grpcSrv := grpc.NewServer(options...)
 	reflection.Register(grpcSrv)
 
 	server.Register(grpcSrv, service)

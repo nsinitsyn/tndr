@@ -1,4 +1,8 @@
-env: "local"
+service:
+  env: "local"
+  name: "geo service e2e test"
+  version: "v1"
+  instance: "geo-test-1"
 grpc:
   port: 3342
   timeout: 30s
@@ -9,8 +13,11 @@ storage:
   password: ""
   db: 0
 reaction_service:
-  url: "http://localhost:2343"
+  endpoint: "http://localhost:2343"
 messaging:
   servers: "localhost:39092"
   group: "geo-e2e-test"
   topic: "profile.updates"
+tracing:
+  enabled: false
+  endpoint: ""

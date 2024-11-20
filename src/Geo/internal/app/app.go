@@ -12,6 +12,7 @@ import (
 	"tinder-geo/internal/infrastructure/storage"
 	"tinder-geo/internal/infrastructure/transport"
 	"tinder-geo/internal/service"
+	"tinder-geo/internal/trace"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
@@ -29,7 +30,7 @@ const (
 func Run() (closer func()) {
 	config := config.GetConfig()
 
-	logger := setupLogger(config.Env)
+	logger := setupLogger(config.Service.Env)
 	logger.Info("start...")
 
 	storage := storage.NewGeoStorage(config.Storage)
@@ -43,7 +44,16 @@ func Run() (closer func()) {
 		collectors.NewGoCollector(),
 	)
 
-	grpcServer := transport.NewGRPCServer(config.GRPC, logger, service, promRegistry)
+	if config.Tracing.Enabled {
+		err := trace.InitTracer(config.Tracing, config.Service)
+		if err != nil {
+			logger.Error("init tracer error", slog.Any("error", err))
+			os.Exit(1)
+		}
+		logger.Info("tracer initialized")
+	}
+
+	grpcServer := transport.NewGRPCServer(config.GRPC, logger, service, promRegistry, config.Tracing.Enabled)
 	httpServer := transport.NewHTTPServer(config.HTTP, logger, promRegistry)
 
 	ctx, cancel := context.WithCancel(context.Background())

@@ -1,4 +1,8 @@
-env: "local"
+service:
+  env: "local"
+  name: "geo service"
+  version: "v1"
+  instance: "geo1"
 grpc:
   port: 2342
   timeout: 30s
@@ -9,8 +13,11 @@ storage:
   password: ""
   db: 0
 reaction_service:
-  url: "http://localhost:2343"
+  endpoint: "http://localhost:2343"
 messaging:
   servers: "localhost:29092"
   group: "geo4"
   topic: "profile.updates"
+tracing:
+  enabled: true
+  endpoint: "localhost:4318"

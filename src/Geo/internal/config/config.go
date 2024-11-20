@@ -10,12 +10,20 @@ import (
 )
 
 type Config struct {
-	Env             string              `yaml:"env" env-required:"true"`
+	Service         ServiceConfig       `yaml:"service" env-required:"true"`
 	GRPC            GRPCConfig          `yaml:"grpc" env-required:"true"`
 	HTTP            HTTPConfig          `yaml:"http" env-required:"true"`
 	Storage         StorageConfig       `yaml:"storage" env-required:"true"`
 	ReactionService RemoteServiceConfig `yaml:"reaction_service" env-required:"true"`
 	Messaging       MessagingConfig     `yaml:"messaging" env-required:"true"`
+	Tracing         TracingConfig       `yaml:"tracing" env-required:"true"`
+}
+
+type ServiceConfig struct {
+	Env        string `yaml:"env" env-required:"true"`
+	Name       string `yaml:"name" env-required:"true"`
+	Version    string `yaml:"version" env-required:"true"`
+	InstanceID string `yaml:"instance" env-required:"true"`
 }
 
 type GRPCConfig struct {
@@ -34,13 +42,18 @@ type StorageConfig struct {
 }
 
 type RemoteServiceConfig struct {
-	URL string `yaml:"url" env-required:"true"`
+	Endpoint string `yaml:"endpoint" env-required:"true"`
 }
 
 type MessagingConfig struct {
 	Servers string `yaml:"servers" env-required:"true"`
 	Group   string `yaml:"group" env-required:"true"`
 	Topic   string `yaml:"topic" env-required:"true"`
+}
+
+type TracingConfig struct {
+	Enabled  bool   `yaml:"enabled" env-default:"false"`
+	Endpoint string `yaml:"endpoint" env-default:""`
 }
 
 var instance *Config

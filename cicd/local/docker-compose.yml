@@ -10,3 +10,13 @@ services:
       - "6379:6379"
     volumes:
       - ./redis.conf:/usr/local/etc/redis/redis.conf
+      
+  jaeger:
+    container_name: jaeger
+    image: jaegertracing/all-in-one
+    restart: unless-stopped
+    ports:
+      - "14268:14268"
+      - "16686:16686"
+      - "4317:4317"
+      - "4318:4318"

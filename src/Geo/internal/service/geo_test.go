@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// go test -v --tags=unit,e2e  -count=1 ./... -coverprofile=cover.out
+// go test -v --tags=unit -count=1 ./... -coverprofile=cover.out
 
 type StorageMock struct {
 	getProfilesByGeohash func(ctx context.Context, geohash string, gender model.Gender) ([]model.Profile, error)
