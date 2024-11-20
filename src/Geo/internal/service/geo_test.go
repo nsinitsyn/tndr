@@ -1,4 +1,4 @@
-//go:build !e2e
+//go:build unit
 
 package service
 
@@ -11,6 +11,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// go test -v --tags=unit,e2e  -count=1 ./... -coverprofile=cover.out
 
 type StorageMock struct {
 	getProfilesByGeohash func(ctx context.Context, geohash string, gender model.Gender) ([]model.Profile, error)
@@ -35,8 +37,6 @@ type ReactionServiceClientMock struct {
 func (r ReactionServiceClientMock) GetReactedProfiles(ctx context.Context, profileId int64) ([]int64, error) {
 	return r.getReactedProfiles(ctx, profileId)
 }
-
-// go test -v -count=1 ./...
 
 func TestGetProfiles(t *testing.T) {
 	cases := map[string]struct {
