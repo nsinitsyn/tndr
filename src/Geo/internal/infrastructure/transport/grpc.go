@@ -100,7 +100,6 @@ func (s GRPCServer) Run() error {
 
 func (s GRPCServer) GracefulStop() {
 	s.srv.GracefulStop()
-	s.logger.Info("GRPC server stopped")
 }
 
 func interceptorLogger(logger *slog.Logger) logging.Logger {

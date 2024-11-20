@@ -4,6 +4,7 @@ import (
 	"context"
 	"log/slog"
 	"os"
+	"sync"
 	"time"
 	"tinder-geo/internal/config"
 	"tinder-geo/internal/infrastructure/client"
@@ -47,29 +48,26 @@ func Run() (closer func()) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	consumingStarted := make(chan struct{})
-	consumingShutdown := make(chan struct{})
+
+	wg := sync.WaitGroup{}
+	wg.Add(3)
+
 	go func() {
 		if err := consumer.StartConsume(ctx, consumingStarted); err != nil {
 			logger.Error("fatal error", slog.Any("error", err))
 			os.Exit(1)
 		}
 		logger.Info("consuming stopped")
-		close(consumingShutdown)
+		wg.Done()
 	}()
-
-	select {
-	case <-consumingStarted:
-		break
-	case <-time.After(CONSUMING_START_TIMEOUT_SEC * time.Second):
-		logger.Error("fatal error: consuming start timeout expired")
-		os.Exit(1)
-	}
 
 	go func() {
 		if err := grpcServer.Run(); err != nil {
 			logger.Error("GRPC server starting error", slog.Any("error", err))
 			os.Exit(1)
 		}
+		logger.Info("GRPC server stopped")
+		wg.Done()
 	}()
 
 	go func() {
@@ -77,44 +75,34 @@ func Run() (closer func()) {
 			logger.Error("HTTP server starting error", slog.Any("error", err))
 			os.Exit(1)
 		}
+		logger.Info("HTTP server stopped")
+		wg.Done()
 	}()
+
+	// Wait consuming start
+	select {
+	case <-consumingStarted:
+		break
+	case <-time.After(CONSUMING_START_TIMEOUT_SEC * time.Second):
+		logger.Error("consuming start timeout expired")
+		os.Exit(1)
+	}
 
 	return func() {
 		cancel()
+		go grpcServer.GracefulStop()
+		go httpServer.GracefulStop(context.Background())
 
-		// todo: smelly code for shutdown
-		serverShutdown := make(chan struct{})
+		stopped := make(chan struct{})
 		go func() {
-			grpcServer.GracefulStop()
-			close(serverShutdown)
+			wg.Wait()
+			close(stopped)
 		}()
 
-		ctx, cancel = context.WithTimeout(context.Background(), GRACEFUL_SHUTDOWN_TIMEOUT_SEC*time.Second)
-		defer cancel()
-		httpServerShutdown := make(chan struct{})
-		go func() {
-			if err := httpServer.GracefulStop(ctx); err != nil {
-				logger.Error("HTTP server shutdown error", slog.Any("error", err))
-			}
-			close(httpServerShutdown)
-		}()
-
-		timeout := time.After(GRACEFUL_SHUTDOWN_TIMEOUT_SEC * time.Second)
-		stopped := 0
-		for stopped != 3 {
-			select {
-			case <-consumingShutdown:
-				consumingShutdown = nil
-				stopped++
-			case <-serverShutdown:
-				serverShutdown = nil
-				stopped++
-			case <-httpServerShutdown:
-				httpServerShutdown = nil
-				stopped++
-			case <-timeout:
-				stopped = 3
-			}
+		select {
+		case <-stopped:
+		case <-time.After(GRACEFUL_SHUTDOWN_TIMEOUT_SEC * time.Second):
+			break
 		}
 
 		logger.Info("application stopped")

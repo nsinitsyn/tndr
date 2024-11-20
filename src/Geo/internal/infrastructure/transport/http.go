@@ -46,10 +46,9 @@ func (s HTTPServer) Run() error {
 	return nil
 }
 
-func (s HTTPServer) GracefulStop(ctx context.Context) error {
+func (s HTTPServer) GracefulStop(ctx context.Context) {
 	err := s.srv.Shutdown(ctx)
-	if err == nil {
-		s.logger.Info("HTTP server stopped")
+	if err != nil {
+		s.logger.Error("HTTP server shutdown error", slog.Any("error", err))
 	}
-	return err
 }
