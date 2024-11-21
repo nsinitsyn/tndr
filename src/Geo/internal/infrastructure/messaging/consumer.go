@@ -21,41 +21,40 @@ type Service interface {
 }
 
 type kafkaConsumer struct {
-	config  config.MessagingConfig
-	logger  *slog.Logger
-	service Service
+	config   config.MessagingConfig
+	consumer *kafka.Consumer
+	logger   *slog.Logger
+	service  Service
 }
 
-func NewConsumer(config config.MessagingConfig, logger *slog.Logger, service Service) kafkaConsumer {
-	return kafkaConsumer{config: config, logger: logger, service: service}
-}
-
-func (k kafkaConsumer) StartConsume(ctx context.Context, consumingStarted chan<- struct{}) error {
-	k.logger.Info("start consuming...")
+func NewConsumer(config config.MessagingConfig, logger *slog.Logger, service Service) (kafkaConsumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers":  k.config.Servers,
-		"group.id":           k.config.Group,
+		"bootstrap.servers":  config.Servers,
+		"group.id":           config.Group,
 		"auto.offset.reset":  "earliest",
 		"enable.auto.commit": false,
 	})
 	if err != nil {
-		return err
+		return kafkaConsumer{}, err
 	}
-	defer consumer.Close()
 
-	err = consumer.SubscribeTopics([]string{k.config.Topic}, nil)
+	return kafkaConsumer{config: config, consumer: consumer, logger: logger, service: service}, nil
+}
+
+func (k kafkaConsumer) MustSubscribe() {
+	err := k.consumer.SubscribeTopics([]string{k.config.Topic}, nil)
 	if err != nil {
-		return err
+		panic(err)
 	}
+}
 
+func (k kafkaConsumer) StartConsume(ctx context.Context) error {
 	k.logger.Info("consuming started")
-
-	close(consumingStarted)
 
 	batch := make([]dto.ProfileDto, 0, BATCH_SIZE)
 
 	for !errors.Is(ctx.Err(), context.Canceled) {
-		msg, err := consumer.ReadMessage(READ_MESSAGE_TIMEOUT_SEC * time.Second)
+		msg, err := k.consumer.ReadMessage(READ_MESSAGE_TIMEOUT_SEC * time.Second)
 		if err == nil {
 			var profileDto dto.ProfileDto
 			err := json.Unmarshal(msg.Value, &profileDto)
@@ -74,14 +73,14 @@ func (k kafkaConsumer) StartConsume(ctx context.Context, consumingStarted chan<-
 			if len(batch) == BATCH_SIZE {
 				k.processBatch(ctx, batch)
 				batch = batch[:0]
-				consumer.Commit()
+				k.consumer.Commit()
 			}
 			k.logger.Info("received", slog.Any("dto", profileDto))
 		} else if err.(kafka.Error).Code() == kafka.ErrTimedOut {
 			if len(batch) > 0 {
 				k.processBatch(ctx, batch)
 				batch = batch[:0]
-				consumer.Commit()
+				k.consumer.Commit()
 			}
 			continue
 		} else {
@@ -91,7 +90,7 @@ func (k kafkaConsumer) StartConsume(ctx context.Context, consumingStarted chan<-
 		}
 	}
 
-	return nil
+	return k.consumer.Close()
 }
 
 func (k kafkaConsumer) processBatch(ctx context.Context, profilesDtos []dto.ProfileDto) {

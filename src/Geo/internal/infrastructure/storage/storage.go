@@ -10,6 +10,10 @@ import (
 	"tinder-geo/internal/domain/model"
 	"tinder-geo/internal/service"
 
+	"github.com/redis/go-redis/extra/redisprometheus/v9"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/redis/go-redis/extra/redisotel/v9"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -19,21 +23,32 @@ var _ service.GeoStorage = (*geoStorage)(nil)
 
 type geoStorage struct {
 	config config.StorageConfig
+	client *redis.Client
 }
 
-func NewGeoStorage(config config.StorageConfig) geoStorage {
-	return geoStorage{config: config}
+func NewGeoStorage(config config.StorageConfig, promRegistry *prometheus.Registry) geoStorage {
+	client := redis.NewClient(&redis.Options{
+		Addr:     config.Addr,
+		Password: config.Password,
+		DB:       config.DB,
+	})
+
+	collector := redisprometheus.NewCollector("geo", "redis", client)
+	promRegistry.MustRegister(collector)
+
+	if err := redisotel.InstrumentTracing(client); err != nil {
+		panic(err)
+	}
+
+	return geoStorage{config: config, client: client}
+}
+
+func (s geoStorage) Close() error {
+	return s.client.Close()
 }
 
 func (s geoStorage) GetProfilesByGeohash(ctx context.Context, geohash string, gender model.Gender) ([]model.Profile, error) {
-	client := redis.NewClient(&redis.Options{
-		Addr:     s.config.Addr,
-		Password: s.config.Password,
-		DB:       s.config.DB,
-	})
-	defer client.Close()
-
-	profilesMap, err := client.HGetAll(ctx, fmt.Sprintf("geohash:%s:%s", geohash, gender.String())).Result()
+	profilesMap, err := s.client.HGetAll(ctx, fmt.Sprintf("geohash:%s:%s", geohash, gender.String())).Result()
 	if err != nil {
 		return nil, err
 	}
@@ -53,15 +68,8 @@ func (s geoStorage) GetProfilesByGeohash(ctx context.Context, geohash string, ge
 }
 
 func (s geoStorage) UpdateGeohash(ctx context.Context, profileId int64, gender model.Gender, geohash string) error {
-	client := redis.NewClient(&redis.Options{
-		Addr:     s.config.Addr,
-		Password: s.config.Password,
-		DB:       s.config.DB,
-	})
-	defer client.Close()
-
 	profileIdStr := strconv.FormatInt(profileId, 10)
-	curGeo, _ := client.HGet(ctx, "profiles:geo", profileIdStr).Result()
+	curGeo, _ := s.client.HGet(ctx, "profiles:geo", profileIdStr).Result()
 	if geohash == curGeo {
 		return nil
 	}
@@ -71,13 +79,13 @@ func (s geoStorage) UpdateGeohash(ctx context.Context, profileId int64, gender m
 
 	// Using CAS (check-and-set) for sync of concurrent UpdateGeohash and UpdateProfile calls
 	for i := 0; i < MAX_RETRIES; i++ {
-		err := client.Watch(ctx, func(tx *redis.Tx) error {
+		err := s.client.Watch(ctx, func(tx *redis.Tx) error {
 			n, err := tx.Get(ctx, versionKey).Int64()
 			if err != nil && err != redis.Nil {
 				return err
 			}
 
-			curGeo, err = client.HGet(ctx, "profiles:geo", profileIdStr).Result()
+			curGeo, err = s.client.HGet(ctx, "profiles:geo", profileIdStr).Result()
 			if err != nil && err != redis.Nil {
 				return err
 			}
@@ -94,7 +102,7 @@ func (s geoStorage) UpdateGeohash(ctx context.Context, profileId int64, gender m
 			curGeoKey := fmt.Sprintf("geohash:%s:%s", curGeo, genderStr)
 			newGeoKey := fmt.Sprintf("geohash:%s:%s", geohash, genderStr)
 			// Get profile from cur:
-			profile, _ := client.HGet(ctx, curGeoKey, profileIdStr).Result()
+			profile, _ := s.client.HGet(ctx, curGeoKey, profileIdStr).Result()
 
 			_, err = tx.TxPipelined(ctx, func(pipe redis.Pipeliner) error {
 				// Add profile to new geohash
@@ -124,25 +132,18 @@ func (s geoStorage) UpdateGeohash(ctx context.Context, profileId int64, gender m
 }
 
 func (s geoStorage) UpdateProfile(ctx context.Context, gender model.Gender, profile model.Profile) error {
-	client := redis.NewClient(&redis.Options{
-		Addr:     s.config.Addr,
-		Password: s.config.Password,
-		DB:       s.config.DB,
-	})
-	defer client.Close()
-
 	profileIdStr := strconv.FormatInt(profile.ID, 10)
 	genderStr := gender.String()
 	var versionKey = fmt.Sprintf("profile:version:%d", profile.ID)
 
 	for i := 0; i < MAX_RETRIES; i++ {
-		err := client.Watch(ctx, func(tx *redis.Tx) error {
+		err := s.client.Watch(ctx, func(tx *redis.Tx) error {
 			n, err := tx.Get(ctx, versionKey).Int64()
 			if err != nil && err != redis.Nil {
 				return err
 			}
 
-			curGeo, err := client.HGet(ctx, "profiles:geo", profileIdStr).Result()
+			curGeo, err := s.client.HGet(ctx, "profiles:geo", profileIdStr).Result()
 			if err != nil && err != redis.Nil {
 				return err
 			}

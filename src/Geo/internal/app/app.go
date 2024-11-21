@@ -19,7 +19,6 @@ import (
 )
 
 const GRACEFUL_SHUTDOWN_TIMEOUT_SEC = 10
-const CONSUMING_START_TIMEOUT_SEC = 15
 
 const (
 	envLocal = "local"
@@ -33,16 +32,21 @@ func Run() (closer func()) {
 	logger := setupLogger(config.Service.Env)
 	logger.Info("start...")
 
-	storage := storage.NewGeoStorage(config.Storage)
-	reactionServiceClient := client.NewReactionServiceClient()
-	service := service.NewGeoService(storage, reactionServiceClient)
-	consumer := messaging.NewConsumer(config.Messaging, logger, storage)
-
 	promRegistry := prometheus.NewRegistry()
 	promRegistry.MustRegister(
 		collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}),
 		collectors.NewGoCollector(),
 	)
+
+	storage := storage.NewGeoStorage(config.Storage, promRegistry)
+	reactionServiceClient := client.NewReactionServiceClient()
+	service := service.NewGeoService(storage, reactionServiceClient)
+	consumer, err := messaging.NewConsumer(config.Messaging, logger, storage)
+	if err != nil {
+		logger.Error("init consumer error", slog.Any("error", err))
+		os.Exit(1)
+	}
+	consumer.MustSubscribe()
 
 	if config.Tracing.Enabled {
 		err := trace.InitTracer(config.Tracing, config.Service)
@@ -57,13 +61,12 @@ func Run() (closer func()) {
 	httpServer := transport.NewHTTPServer(config.HTTP, logger, promRegistry)
 
 	ctx, cancel := context.WithCancel(context.Background())
-	consumingStarted := make(chan struct{})
 
 	wg := sync.WaitGroup{}
 	wg.Add(3)
 
 	go func() {
-		if err := consumer.StartConsume(ctx, consumingStarted); err != nil {
+		if err := consumer.StartConsume(ctx); err != nil {
 			logger.Error("fatal error", slog.Any("error", err))
 			os.Exit(1)
 		}
@@ -89,19 +92,11 @@ func Run() (closer func()) {
 		wg.Done()
 	}()
 
-	// Wait consuming start
-	select {
-	case <-consumingStarted:
-		break
-	case <-time.After(CONSUMING_START_TIMEOUT_SEC * time.Second):
-		logger.Error("consuming start timeout expired")
-		os.Exit(1)
-	}
-
 	return func() {
 		cancel()
 		go grpcServer.GracefulStop()
 		go httpServer.GracefulStop(context.Background())
+		storage.Close()
 
 		stopped := make(chan struct{})
 		go func() {
