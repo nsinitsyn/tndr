@@ -2,11 +2,16 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"tinder-geo/internal/domain/model"
 	"tinder-geo/internal/infrastructure/messaging"
 	"tinder-geo/internal/server"
 
+	trace_utils "tinder-geo/internal/trace"
+
 	"github.com/mmcloughlin/geohash"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
 )
 
 var _ server.Service = (*geoService)(nil)
@@ -34,6 +39,14 @@ func NewGeoService(storage GeoStorage, reactionClient ReactionServiceClient) geo
 }
 
 func (g geoService) GetProfilesByLocation(ctx context.Context, profileId int64, gender model.Gender, lat, lng float64) ([]model.Profile, error) {
+	ctx, span := trace_utils.StartNewSpanWithCurrentFunctionName(
+		ctx,
+		otel.Tracer("domain"),
+		attribute.Float64("tndr.params.latitude", lat),
+		attribute.Float64("tndr.params.longitude", lng),
+	)
+	defer span.End()
+
 	geohash := geohash.EncodeWithPrecision(lat, lng, PRECISION)
 	geoProfiles, err := g.storage.GetProfilesByGeohash(ctx, geohash, gender.Invert())
 	if err != nil {
@@ -48,18 +61,35 @@ func (g geoService) GetProfilesByLocation(ctx context.Context, profileId int64, 
 	excludedProfilesIds = append(excludedProfilesIds, profileId)
 	result := g.excludeProfiles(geoProfiles, excludedProfilesIds)
 
+	trace_utils.AddAttributesToCurrentSpan(ctx, attribute.String("tndr.result.profiles", fmt.Sprint(result)))
+
 	// todo: feature: if profiles wasn't found in specified geohash then to find in neighboring geohashes
 
 	return result, nil
 }
 
 func (g geoService) ChangeLocation(ctx context.Context, profileId int64, gender model.Gender, lat, lng float64) error {
+	ctx, span := trace_utils.StartNewSpanWithCurrentFunctionName(
+		ctx,
+		otel.Tracer("domain"),
+		attribute.Float64("tndr.params.latitude", lat),
+		attribute.Float64("tndr.params.longitude", lng),
+	)
+	defer span.End()
+
 	geohash := geohash.EncodeWithPrecision(lat, lng, PRECISION)
 	err := g.storage.UpdateGeohash(ctx, profileId, gender, geohash)
 	return err
 }
 
 func (g geoService) UpdateProfile(ctx context.Context, gender model.Gender, profile model.Profile) error {
+	ctx, span := trace_utils.StartNewSpanWithCurrentFunctionName(
+		ctx,
+		otel.Tracer("domain"),
+		attribute.String("tndr.params.profile", fmt.Sprint(profile)),
+	)
+	defer span.End()
+
 	return g.storage.UpdateProfile(ctx, gender, profile)
 }
 

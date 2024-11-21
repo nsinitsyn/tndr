@@ -20,4 +20,4 @@ messaging:
   topic: "profile.updates"
 tracing:
   enabled: false
-  endpoint: ""
+  endpoint: "localhost:4318"

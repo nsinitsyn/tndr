@@ -17,12 +17,17 @@ import (
 	"github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/selector"
 	prom "github.com/prometheus/client_golang/prometheus"
 	"go.opentelemetry.io/contrib/instrumentation/google.golang.org/grpc/otelgrpc"
+	"go.opentelemetry.io/otel/attribute"
+	semconv "go.opentelemetry.io/otel/semconv/v1.17.0"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/health"
 	"google.golang.org/grpc/health/grpc_health_v1"
+	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
+
+	trace_utils "tinder-geo/internal/trace"
 )
 
 type userClaims struct {
@@ -65,6 +70,7 @@ func NewGRPCServer(
 		grpc.ChainUnaryInterceptor(
 			serverMetrics.UnaryServerInterceptor(),
 			recovery.UnaryServerInterceptor(recoveryOpts...),
+			grpc.UnaryServerInterceptor(traceInterseptor),
 			logging.UnaryServerInterceptor(interceptorLogger(logger), loggingOpts...),
 			selector.UnaryServerInterceptor(
 				auth.UnaryServerInterceptor(authenticator),
@@ -115,6 +121,20 @@ func (s GRPCServer) GracefulStop() {
 	s.srv.GracefulStop()
 }
 
+func traceInterseptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	p, _ := peer.FromContext(ctx)
+	ip := p.Addr.String()
+	trace_utils.AddAttributesToCurrentSpan(ctx, semconv.HTTPClientIP(ip))
+
+	resp, err := handler(ctx, req)
+
+	if err != nil {
+		trace_utils.SetErrorForCurrentSpan(ctx, err)
+	}
+
+	return resp, err
+}
+
 func interceptorLogger(logger *slog.Logger) logging.Logger {
 	return logging.LoggerFunc(func(ctx context.Context, lvl logging.Level, msg string, fields ...any) {
 		logger.Log(ctx, slog.Level(lvl), msg, fields...)
@@ -134,11 +154,23 @@ func authenticator(ctx context.Context) (context.Context, error) {
 	claims := parsedToken.Claims.(*userClaims)
 
 	if !parsedToken.Valid {
+		trace_utils.AddAttributesToCurrentSpan(
+			ctx,
+			attribute.String("tndr.warning", "invalid jwt"),
+			attribute.String("tndr.jwt", parsedToken.Raw),
+		)
 		return nil, status.Error(codes.Unauthenticated, "invalid auth token")
 	}
 
 	ctx = context.WithValue(ctx, server.ProfileIdCtxKey, claims.ProfileId)
 	ctx = context.WithValue(ctx, server.GenderCtxKey, claims.Gender)
+
+	trace_utils.AddAttributesToCurrentSpan(
+		ctx,
+		attribute.String("tndr.profile.id", claims.ProfileId),
+		attribute.String("tndr.profile.gender", claims.Gender),
+	)
+
 	return ctx, nil
 }
 

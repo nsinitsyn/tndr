@@ -11,6 +11,10 @@ import (
 	"tinder-geo/internal/service"
 
 	"github.com/redis/go-redis/extra/redisprometheus/v9"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+
+	trace_utils "tinder-geo/internal/trace"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/redis/go-redis/extra/redisotel/v9"
@@ -48,6 +52,15 @@ func (s geoStorage) Close() error {
 }
 
 func (s geoStorage) GetProfilesByGeohash(ctx context.Context, geohash string, gender model.Gender) ([]model.Profile, error) {
+	tracer := otel.Tracer("storage")
+	ctx, span := trace_utils.StartNewSpanWithCurrentFunctionName(
+		ctx,
+		tracer,
+		attribute.String("tndr.params.geohash", geohash),
+		attribute.String("tndr.params.gender", gender.String()),
+	)
+	defer span.End()
+
 	profilesMap, err := s.client.HGetAll(ctx, fmt.Sprintf("geohash:%s:%s", geohash, gender.String())).Result()
 	if err != nil {
 		return nil, err
@@ -64,10 +77,22 @@ func (s geoStorage) GetProfilesByGeohash(ctx context.Context, geohash string, ge
 
 		profiles = append(profiles, profile)
 	}
+
+	trace_utils.AddAttributesToCurrentSpan(ctx, attribute.String("tndr.result.profiles", fmt.Sprint(profiles)))
+
 	return profiles, nil
 }
 
 func (s geoStorage) UpdateGeohash(ctx context.Context, profileId int64, gender model.Gender, geohash string) error {
+	ctx, span := trace_utils.StartNewSpanWithCurrentFunctionName(
+		ctx,
+		otel.Tracer("domain"),
+		attribute.Int64("tndr.params.profileId", profileId),
+		attribute.String("tndr.params.gender", gender.String()),
+		attribute.String("tndr.params.geohash", geohash),
+	)
+	defer span.End()
+
 	profileIdStr := strconv.FormatInt(profileId, 10)
 	curGeo, _ := s.client.HGet(ctx, "profiles:geo", profileIdStr).Result()
 	if geohash == curGeo {
@@ -132,6 +157,14 @@ func (s geoStorage) UpdateGeohash(ctx context.Context, profileId int64, gender m
 }
 
 func (s geoStorage) UpdateProfile(ctx context.Context, gender model.Gender, profile model.Profile) error {
+	ctx, span := trace_utils.StartNewSpanWithCurrentFunctionName(
+		ctx,
+		otel.Tracer("domain"),
+		attribute.String("tndr.params.gender", gender.String()),
+		attribute.String("tndr.params.profile", fmt.Sprint(profile)),
+	)
+	defer span.End()
+
 	profileIdStr := strconv.FormatInt(profile.ID, 10)
 	genderStr := gender.String()
 	var versionKey = fmt.Sprintf("profile:version:%d", profile.ID)
