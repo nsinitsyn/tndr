@@ -4,8 +4,6 @@ package tinder;
 
 option go_package = "./;tinderpbv1";
 
-import "error_messages.proto";
-
 service MatchService {
     rpc GetMatches (GetMatchesRequest) returns (GetMatchesResponse);
 }
@@ -16,9 +14,8 @@ message GetMatchesRequest {
 
 message GetMatchesResponse {
     oneof error {
-        UnexpectedServerError unexpected_server_error = 1;
-        NoUpdatesError no_updates = 2;
-        IncorrectVersionError incorrect_version = 3;
+        NoUpdatesError no_updates = 1;
+        IncorrectVersionError incorrect_version = 2;
     }
 }
 

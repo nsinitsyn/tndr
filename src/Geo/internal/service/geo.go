@@ -63,8 +63,6 @@ func (g geoService) GetProfilesByLocation(ctx context.Context, profileId int64, 
 
 	trace_utils.AddAttributesToCurrentSpan(ctx, attribute.String("tndr.result.profiles", fmt.Sprint(result)))
 
-	// todo: feature: if profiles wasn't found in specified geohash then to find in neighboring geohashes
-
 	return result, nil
 }
 

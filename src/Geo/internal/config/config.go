@@ -4,7 +4,6 @@ import (
 	"log"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/ilyakaznacheev/cleanenv"
 )
@@ -27,8 +26,7 @@ type ServiceConfig struct {
 }
 
 type GRPCConfig struct {
-	Port    int           `yaml:"port" env-required:"true"`
-	Timeout time.Duration `yaml:"timeout" env-required:"true"`
+	Port int `yaml:"port" env-required:"true"`
 }
 
 type HTTPConfig struct {

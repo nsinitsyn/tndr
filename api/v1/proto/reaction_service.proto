@@ -4,8 +4,6 @@ package tinder;
 
 option go_package = "./;tinderpbv1";
 
-import "error_messages.proto";
-
 service ReactionService {
     rpc Like (LikeRequest) returns (LikeResponse);
     rpc Dislike (DislikeRequest) returns (DislikeResponse);
@@ -16,9 +14,6 @@ message LikeRequest {
 }
 
 message LikeResponse {
-    oneof error {
-        UnexpectedServerError unexpected_server_error = 1;
-    }
 }
 
 message DislikeRequest{
@@ -26,7 +21,4 @@ message DislikeRequest{
 }
 
 message DislikeResponse {
-    oneof error {
-        UnexpectedServerError unexpected_server_error = 1;
-    }
 }

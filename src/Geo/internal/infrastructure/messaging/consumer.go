@@ -42,7 +42,26 @@ func NewConsumer(config config.MessagingConfig, logger *slog.Logger, service Ser
 }
 
 func (k kafkaConsumer) MustSubscribe() {
-	err := k.consumer.SubscribeTopics([]string{k.config.Topic}, nil)
+	admin, err := kafka.NewAdminClient(&kafka.ConfigMap{"bootstrap.servers": k.config.Servers})
+	if err != nil {
+		panic(err)
+	}
+
+	// Create topic if not exists
+	_, err = admin.GetMetadata(&k.config.Topic, false, 5000)
+	if err != nil {
+		panic(err)
+	}
+
+	_, err = admin.CreateTopics(context.Background(), []kafka.TopicSpecification{{
+		Topic:             k.config.Topic,
+		NumPartitions:     1,
+		ReplicationFactor: 1}})
+	if err != nil {
+		panic(err)
+	}
+
+	err = k.consumer.SubscribeTopics([]string{k.config.Topic}, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -85,8 +104,6 @@ func (k kafkaConsumer) StartConsume(ctx context.Context) error {
 			continue
 		} else {
 			k.logger.Error("error consuming message", slog.Any("error", err))
-			// todo: нужно ли здесь делать коммит? И запроцессить текущий батч?
-			// todo: поместить сообщение в dead letter queue
 		}
 	}
 

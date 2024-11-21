@@ -16,9 +16,6 @@ message GetProfilesByLocationRequest {
 
 message GetProfilesByLocationResponse {
     repeated LocationProfileDto profiles = 1;
-    oneof error {
-        NoNewProfilesError no_new_profiles = 2;
-    }
 }
 
 message LocationProfileDto {
@@ -34,23 +31,4 @@ message ChangeLocationRequest {
 }
 
 message ChangeLocationResponse {
-    oneof error {
-        ProfileIdNotFoundError profile_id_not_found = 1;
-        GeoZoneIdNotFoundError geo_zone_id_not_found = 2;
-    }
-}
-
-// Profiles wasn't found in requested geo zone
-message NoNewProfilesError {
-
-}
-
-// todo: remove
-message ProfileIdNotFoundError {
-
-}
-
-// todo: remove
-message GeoZoneIdNotFoundError {
-    
 }

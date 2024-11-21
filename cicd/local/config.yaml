@@ -8,15 +8,15 @@ grpc:
 http:
   port: 2322
 storage:
-  addr: "localhost:6379"
+  addr: "tndr-redis:6379"
   password: ""
   db: 0
 reaction_service:
-  endpoint: "http://localhost:2343"
+  endpoint: "http://tndr-reaction-service:2343"
 messaging:
-  servers: "localhost:29092"
+  servers: "tndr-kafka:9092"
   group: "geo1"
   topic: "profile.updates"
 tracing:
   enabled: true
-  endpoint: "localhost:4318"
+  endpoint: "tndr-jaeger:4318"

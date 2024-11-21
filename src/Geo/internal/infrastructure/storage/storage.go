@@ -120,7 +120,6 @@ func (s geoStorage) UpdateGeohash(ctx context.Context, profileId int64, gender m
 			// But in this case other users can see empty profile in this geolocation. We would have to add a marker of an empty profile and take it when searching. It's overhead.
 			// We just will wait until profile will be sync and update geohash later.
 			if err == redis.Nil {
-				// todo: как-то надо чекать ситуацию, если профиль по какой-то причине не дошел и уже не дойдет в GeoService. Тогда профиль никогда не будет показан другим пользователям!
 				return nil
 			}
 
