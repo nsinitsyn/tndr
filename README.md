@@ -18,7 +18,7 @@ PROD качество: observability (logging, metrics, tracing), graceful shutd
 
 JWT авторизация
 
-Docker compose для запуска системы и всех ее зависимостей: /cicd/local/docker-compose.yml
+Docker compose для запуска системы и всех ее зависимостей: `cicd/local/docker-compose.yml`
 
 На данный момент реализованы ProfileService на C# и GeoService на Golang.
 ProfileService отвечает за хранение и управление профилями пользователей.
@@ -33,9 +33,9 @@ GeoService использует подход [геохеширования](http
 ![alt text](https://github.com/nsinitsyn/tndr/blob/master/architecture/redis%20optimistic%20locking%20-%20jeager.png?raw=true)
 
 ## Запуск приложения
-Geo service с нужной инфраструктурой запускается через docker compose: cicd/local/docker-compose.yml
+Geo service с нужной инфраструктурой запускается через docker compose `cicd/local/docker-compose.yml`
 
-После запуска он будет слушать входящие grpc запросы на порту 2342. Метрики доступны по HTTP на 2322/metrics
+После запуска он будет слушать входящие grpc запросы на порту `2342`. Метрики доступны по HTTP на `2322/metrics`
 
 Для тестирования можно отправить следующий grpc-запрос через grpcurl (тестовый jwt-токен заранее сгенерирован на длительный срок):
 ```
