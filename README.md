@@ -31,3 +31,17 @@ GeoService использует подход [геохеширования](http
 ## Скриншоты
 Пример обработки конфликта параллелизма при оптимистичном обновлении данных в Redis - скриншот трейса из Jaeger, полученный на end-to-end тесте
 ![alt text](https://github.com/nsinitsyn/tndr/blob/master/architecture/redis%20optimistic%20locking%20-%20jeager.png?raw=true)
+
+## Запуск приложения
+Geo service с нужной инфраструктурой запускается через docker compose: cicd/local/docker-compose.yml
+
+После запуска он будет слушать входящие grpc запросы на порту 2342. Метрики доступны по HTTP на 2322/metrics
+
+Для тестирования можно отправить следующий grpc-запрос через grpcurl (тестовый jwt-токен заранее сгенерирован на длительный срок):
+```
+grpcurl -H 'authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJQcm9maWxlSWQiOiIxIiwiR2VuZGVyIjoiTSIsImV4cCI6MTc2MzIwNzQxMywiaXNzIjoiQXV0aFNlcnZlciIsImF1ZCI6IkF1dGhDbGllbnQifQ.VAVP65lIUhabxR4UknvQkRKiVCfu116cf3tZC8-dsfw' -plaintext -d '{"latitude":55.481, "longitude":37.288}' localhost:2342 tinder.GeoService/GetProfilesByLocation
+```
+
+Должен быть получен пустой ответ, т.к. не были созданы профили (эта функция тоже работает)
+
+В jaeger можно увидеть трассировку по данному запросу с командой в Redis
