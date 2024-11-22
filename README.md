@@ -14,7 +14,7 @@ PROD качество: observability (logging, metrics, tracing), graceful shutd
 
 Стек: Golang, C#, Kafka, Rest, Grpc, PostgreSQL, Redis, Docker, Docker compose, Jaeger
 
-Архитектурные подходы: outbox, eventual consistency, stateless, distributed tracing
+Архитектурные подходы: outbox, eventual consistency, stateless, distributed tracing, optimistic locking
 
 JWT авторизация
 
@@ -27,3 +27,7 @@ GeoService использует подход [геохеширования](http
 
 ## System Design
 ![alt text](https://github.com/nsinitsyn/tndr/blob/master/architecture/system%20design.png?raw=true)
+
+## Скриншоты
+Пример обработки конфликта параллелизма при оптимистичном обновлении данных в Redis - скриншот трейса из Jaeger, полученных на end-to-end тесте
+![alt text](https://github.com/nsinitsyn/tndr/blob/master/architecture/redis%20optimistic%20locking%20-%20jeager.png?raw=true)
