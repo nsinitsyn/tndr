@@ -39,12 +39,10 @@ type userClaims struct {
 type GRPCServer struct {
 	srv    *grpc.Server
 	config config.GRPCConfig
-	logger *slog.Logger
 }
 
 func NewGRPCServer(
 	config config.GRPCConfig,
-	logger *slog.Logger,
 	service server.Service,
 	promRegistry *prom.Registry,
 	enableTracing bool) GRPCServer {
@@ -59,7 +57,7 @@ func NewGRPCServer(
 
 	recoveryOpts := []recovery.Option{
 		recovery.WithRecoveryHandler(func(p interface{}) (err error) {
-			logger.Error("recovered from panic", slog.Any("panic", p))
+			slog.Error("recovered from panic", slog.Any("panic", p))
 			return status.Errorf(codes.Internal, "internal error")
 		}),
 	}
@@ -71,7 +69,7 @@ func NewGRPCServer(
 			serverMetrics.UnaryServerInterceptor(),
 			recovery.UnaryServerInterceptor(recoveryOpts...),
 			grpc.UnaryServerInterceptor(traceInterseptor),
-			logging.UnaryServerInterceptor(interceptorLogger(logger), loggingOpts...),
+			logging.UnaryServerInterceptor(interceptorLogger(), loggingOpts...),
 			selector.UnaryServerInterceptor(
 				auth.UnaryServerInterceptor(authenticator),
 				selector.MatchFunc(authMatcher),
@@ -97,12 +95,11 @@ func NewGRPCServer(
 	return GRPCServer{
 		srv:    grpcSrv,
 		config: config,
-		logger: logger,
 	}
 }
 
 func (s GRPCServer) Run() error {
-	s.logger.Info("GRPC server is running", slog.Int("port", s.config.Port))
+	slog.Info("GRPC server is running", slog.Int("port", s.config.Port))
 
 	list, err := net.Listen("tcp", fmt.Sprintf(":%d", s.config.Port))
 	if err != nil {
@@ -135,9 +132,9 @@ func traceInterseptor(ctx context.Context, req any, info *grpc.UnaryServerInfo, 
 	return resp, err
 }
 
-func interceptorLogger(logger *slog.Logger) logging.Logger {
+func interceptorLogger() logging.Logger {
 	return logging.LoggerFunc(func(ctx context.Context, lvl logging.Level, msg string, fields ...any) {
-		logger.Log(ctx, slog.Level(lvl), msg, fields...)
+		slog.Log(ctx, slog.Level(lvl), msg, fields...)
 	})
 }
 

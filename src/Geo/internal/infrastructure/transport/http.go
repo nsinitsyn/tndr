@@ -14,10 +14,9 @@ import (
 type HTTPServer struct {
 	srv    *http.Server
 	config config.HTTPConfig
-	logger *slog.Logger
 }
 
-func NewHTTPServer(config config.HTTPConfig, logger *slog.Logger, promRegistry *prometheus.Registry) HTTPServer {
+func NewHTTPServer(config config.HTTPConfig, promRegistry *prometheus.Registry) HTTPServer {
 	srv := &http.Server{Addr: fmt.Sprintf(":%d", config.Port)}
 	m := http.NewServeMux()
 	m.Handle("/metrics", promhttp.HandlerFor(
@@ -31,13 +30,12 @@ func NewHTTPServer(config config.HTTPConfig, logger *slog.Logger, promRegistry *
 	return HTTPServer{
 		srv:    srv,
 		config: config,
-		logger: logger,
 	}
 }
 
 func (s HTTPServer) Run() error {
-	s.logger.Info("HTTP server is running", slog.Int("port", s.config.Port))
-	s.logger.Info("metrics are available via", slog.String("url", fmt.Sprintf("%s/metrics", s.srv.Addr)))
+	slog.Info("HTTP server is running", slog.Int("port", s.config.Port))
+	slog.Info("metrics are available via", slog.String("url", fmt.Sprintf("%s/metrics", s.srv.Addr)))
 
 	if err := s.srv.ListenAndServe(); err != http.ErrServerClosed {
 		return err
@@ -49,6 +47,6 @@ func (s HTTPServer) Run() error {
 func (s HTTPServer) GracefulStop(ctx context.Context) {
 	err := s.srv.Shutdown(ctx)
 	if err != nil {
-		s.logger.Error("HTTP server shutdown error", slog.Any("error", err))
+		slog.ErrorContext(ctx, "HTTP server shutdown error", slog.Any("error", err))
 	}
 }

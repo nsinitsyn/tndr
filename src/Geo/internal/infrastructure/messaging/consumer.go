@@ -23,11 +23,10 @@ type Service interface {
 type kafkaConsumer struct {
 	config   config.MessagingConfig
 	consumer *kafka.Consumer
-	logger   *slog.Logger
 	service  Service
 }
 
-func NewConsumer(config config.MessagingConfig, logger *slog.Logger, service Service) (kafkaConsumer, error) {
+func NewConsumer(config config.MessagingConfig, service Service) (kafkaConsumer, error) {
 	consumer, err := kafka.NewConsumer(&kafka.ConfigMap{
 		"bootstrap.servers":  config.Servers,
 		"group.id":           config.Group,
@@ -38,7 +37,7 @@ func NewConsumer(config config.MessagingConfig, logger *slog.Logger, service Ser
 		return kafkaConsumer{}, err
 	}
 
-	return kafkaConsumer{config: config, consumer: consumer, logger: logger, service: service}, nil
+	return kafkaConsumer{config: config, consumer: consumer, service: service}, nil
 }
 
 func (k kafkaConsumer) MustSubscribe() {
@@ -68,7 +67,7 @@ func (k kafkaConsumer) MustSubscribe() {
 }
 
 func (k kafkaConsumer) StartConsume(ctx context.Context) error {
-	k.logger.Info("consuming started")
+	slog.InfoContext(ctx, "consuming started")
 
 	batch := make([]dto.ProfileDto, 0, BATCH_SIZE)
 
@@ -78,7 +77,8 @@ func (k kafkaConsumer) StartConsume(ctx context.Context) error {
 			var profileDto dto.ProfileDto
 			err := json.Unmarshal(msg.Value, &profileDto)
 			if err != nil {
-				k.logger.Error(
+				slog.ErrorContext(
+					ctx,
 					"error decoding message",
 					slog.Any("error", err),
 					slog.Any("message", string(msg.Value)))
@@ -94,7 +94,7 @@ func (k kafkaConsumer) StartConsume(ctx context.Context) error {
 				batch = batch[:0]
 				k.consumer.Commit()
 			}
-			k.logger.Info("received", slog.Any("dto", profileDto))
+			slog.InfoContext(ctx, "received", slog.Any("dto", profileDto))
 		} else if err.(kafka.Error).Code() == kafka.ErrTimedOut {
 			if len(batch) > 0 {
 				k.processBatch(ctx, batch)
@@ -103,7 +103,7 @@ func (k kafkaConsumer) StartConsume(ctx context.Context) error {
 			}
 			continue
 		} else {
-			k.logger.Error("error consuming message", slog.Any("error", err))
+			slog.ErrorContext(ctx, "error consuming message", slog.Any("error", err))
 		}
 	}
 
@@ -111,7 +111,7 @@ func (k kafkaConsumer) StartConsume(ctx context.Context) error {
 }
 
 func (k kafkaConsumer) processBatch(ctx context.Context, profilesDtos []dto.ProfileDto) {
-	k.logger.Info("start batch processing...")
+	slog.InfoContext(ctx, "start batch processing...")
 	for _, dto := range profilesDtos {
 		profile := model.Profile{
 			ID:          dto.ID,
@@ -123,9 +123,9 @@ func (k kafkaConsumer) processBatch(ctx context.Context, profilesDtos []dto.Prof
 
 		err := k.service.UpdateProfile(ctx, dto.Gender, profile)
 		if err != nil {
-			k.logger.Error("error updating profile", slog.Any("error", err))
+			slog.ErrorContext(ctx, "error updating profile", slog.Any("error", err))
 			// todo: publish to dead letter queue...
 		}
 	}
-	k.logger.Info("finish batch processing")
+	slog.InfoContext(ctx, "finish batch processing")
 }

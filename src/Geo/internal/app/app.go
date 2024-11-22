@@ -12,10 +12,11 @@ import (
 	"tinder-geo/internal/infrastructure/storage"
 	"tinder-geo/internal/infrastructure/transport"
 	"tinder-geo/internal/service"
-	"tinder-geo/internal/trace"
+	trace_utils "tinder-geo/internal/trace"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/collectors"
+	"go.opentelemetry.io/otel/trace"
 )
 
 const GRACEFUL_SHUTDOWN_TIMEOUT_SEC = 10
@@ -29,8 +30,8 @@ const (
 func Run() (closer func()) {
 	config := config.GetConfig()
 
-	logger := setupLogger(config.Service.Env)
-	logger.Info("start...")
+	setupLogger(config.Service.Env)
+	slog.Info("start...")
 
 	promRegistry := prometheus.NewRegistry()
 	promRegistry.MustRegister(
@@ -41,24 +42,24 @@ func Run() (closer func()) {
 	storage := storage.NewGeoStorage(config.Storage, promRegistry)
 	reactionServiceClient := client.NewReactionServiceClient()
 	service := service.NewGeoService(storage, reactionServiceClient)
-	consumer, err := messaging.NewConsumer(config.Messaging, logger, storage)
+	consumer, err := messaging.NewConsumer(config.Messaging, storage)
 	if err != nil {
-		logger.Error("init consumer error", slog.Any("error", err))
+		slog.Error("init consumer error", slog.Any("error", err))
 		os.Exit(1)
 	}
 	consumer.MustSubscribe()
 
 	if config.Tracing.Enabled {
-		err := trace.InitTracer(config.Tracing, config.Service)
+		err := trace_utils.InitTracer(config.Tracing, config.Service)
 		if err != nil {
-			logger.Error("init tracer error", slog.Any("error", err))
+			slog.Error("init tracer error", slog.Any("error", err))
 			os.Exit(1)
 		}
-		logger.Info("tracer initialized")
+		slog.Info("tracer initialized")
 	}
 
-	grpcServer := transport.NewGRPCServer(config.GRPC, logger, service, promRegistry, config.Tracing.Enabled)
-	httpServer := transport.NewHTTPServer(config.HTTP, logger, promRegistry)
+	grpcServer := transport.NewGRPCServer(config.GRPC, service, promRegistry, config.Tracing.Enabled)
+	httpServer := transport.NewHTTPServer(config.HTTP, promRegistry)
 
 	ctx, cancel := context.WithCancel(context.Background())
 
@@ -67,28 +68,28 @@ func Run() (closer func()) {
 
 	go func() {
 		if err := consumer.StartConsume(ctx); err != nil {
-			logger.Error("fatal error", slog.Any("error", err))
+			slog.Error("fatal error", slog.Any("error", err))
 			os.Exit(1)
 		}
-		logger.Info("consuming stopped")
+		slog.Info("consuming stopped")
 		wg.Done()
 	}()
 
 	go func() {
 		if err := grpcServer.Run(); err != nil {
-			logger.Error("GRPC server starting error", slog.Any("error", err))
+			slog.Error("GRPC server starting error", slog.Any("error", err))
 			os.Exit(1)
 		}
-		logger.Info("GRPC server stopped")
+		slog.Info("GRPC server stopped")
 		wg.Done()
 	}()
 
 	go func() {
 		if err := httpServer.Run(); err != nil {
-			logger.Error("HTTP server starting error", slog.Any("error", err))
+			slog.Error("HTTP server starting error", slog.Any("error", err))
 			os.Exit(1)
 		}
-		logger.Info("HTTP server stopped")
+		slog.Info("HTTP server stopped")
 		wg.Done()
 	}()
 
@@ -110,31 +111,39 @@ func Run() (closer func()) {
 			break
 		}
 
-		logger.Info("application stopped")
+		slog.Info("application stopped")
 	}
 }
 
-func setupLogger(env string) *slog.Logger {
-	var log *slog.Logger
-
+func setupLogger(env string) {
+	var handler slog.Handler
 	switch env {
 	case envLocal:
-		log = slog.New(
-			slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-		)
+		handler = slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
 	case envDev:
-		log = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}),
-		)
+		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug})
 	case envProd:
-		log = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
-		)
+		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
 	default:
-		log = slog.New(
-			slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}),
-		)
+		handler = slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo})
+	}
+	handler = LogHandler{handler}
+	slog.SetDefault(slog.New(handler))
+}
+
+type LogHandler struct {
+	slog.Handler
+}
+
+func (h LogHandler) Handle(ctx context.Context, r slog.Record) error {
+	spanCtx := trace.SpanContextFromContext(ctx)
+
+	if spanCtx.HasTraceID() {
+		r.Add("trace_id", slog.StringValue(spanCtx.TraceID().String()))
+	}
+	if spanCtx.HasSpanID() {
+		r.Add("span_id", slog.StringValue(spanCtx.SpanID().String()))
 	}
 
-	return log
+	return h.Handler.Handle(ctx, r)
 }
