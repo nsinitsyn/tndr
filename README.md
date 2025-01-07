@@ -33,6 +33,7 @@ GeoService использует подход [геохеширования](http
 ![alt text](https://github.com/nsinitsyn/tndr/blob/master/architecture/redis%20optimistic%20locking%20-%20jeager.png?raw=true)
 
 ## Запуск приложения
+### Docker
 Geo service с нужной инфраструктурой запускается через docker compose `cicd/local/docker-compose.yml`
 
 После запуска он будет слушать входящие grpc запросы на порту `2342`. Метрики доступны по HTTP на `2322/metrics`
@@ -45,3 +46,24 @@ grpcurl -H 'authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJQcm9ma
 Должен быть получен пустой ответ, т.к. не были созданы профили (эта функция тоже работает)
 
 В jaeger можно увидеть трассировку по данному запросу с командой в Redis
+### MAC OS
+Для запуска инфраструктуры и приложения необходимо использовать следующие команды в терминале:
+```
+# run infra
+cd cicd/debug
+docker compose up -d
+# run application
+cd src/Geo
+export CONFIG_PATH='config/config.yaml'; export CGO_ENABLED=1; go run cmd/tinder-geo/main.go
+```
+### Windows
+Предварительно должен быть установлен GCC. В данном примере используется [TDM-GCC](https://github.com/jmeubank/tdm-gcc), который установлен по пути `C:\TDM-GCC-64\bin\gcc`.
+Для запуска инфраструктуры и приложения необходимо использовать следующие команды в командной строке:
+```
+# run infra
+cd cicd/debug
+docker compose up -d
+# run application
+cd src/Geo
+$env:CONFIG_PATH = '././config/config.yaml'; $env:CGO_ENABLED=1; $env:CC="C:\TDM-GCC-64\bin\gcc"; go run cmd/tinder-geo/main.go
+```
