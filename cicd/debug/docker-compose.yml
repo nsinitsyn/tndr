@@ -2,7 +2,7 @@ version: '3.5'
 
 services:
   redis:
-    container_name: redis
+    container_name: tndr-redis
     image: redis:alpine
     restart: unless-stopped
     command: redis-server /usr/local/etc/redis/redis.conf
@@ -12,7 +12,7 @@ services:
       - ./redis.conf:/usr/local/etc/redis/redis.conf
       
   jaeger:
-    container_name: jaeger
+    container_name: tndr-jaeger
     image: jaegertracing/all-in-one
     restart: unless-stopped
     ports:
@@ -22,7 +22,7 @@ services:
       - "4318:4318"
 
   zookeeper:
-    container_name: zookeeper
+    container_name: tndr-zookeeper
     image: bitnami/zookeeper:latest
     ports:
       - "2181:2181"
@@ -32,7 +32,7 @@ services:
       - zookeeper_data:/bitnami
 
   kafka:
-    container_name: kafka
+    container_name: tndr-kafka
     image: bitnami/kafka:latest
     ports:
       - "29092:29092"
@@ -41,10 +41,10 @@ services:
       - kafka_data:/bitnami
     environment:
       - KAFKA_BROKER_ID=1
-      - KAFKA_CFG_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_CFG_ZOOKEEPER_CONNECT=tndr-zookeeper:2181
       - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=INTERNAL:PLAINTEXT,CLIENT:PLAINTEXT
       - KAFKA_CFG_LISTENERS=INTERNAL://:9092,CLIENT://:29092
-      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://kafka:9092,CLIENT://127.0.0.1:29092
+      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://tndr-kafka:9092,CLIENT://127.0.0.1:29092
       - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
       - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
       - ALLOW_PLAINTEXT_LISTENER=yes
