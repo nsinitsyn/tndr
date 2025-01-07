@@ -12,7 +12,7 @@ storage:
   password: ""
   db: 0
 reaction_service:
-  endpoint: "http://tndr-reaction-service:2343"
+  endpoint: "http://tndr-reaction-service:2323"
 messaging:
   servers: "tndr-kafka:9092"
   group: "geo1"

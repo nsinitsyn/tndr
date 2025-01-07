@@ -12,7 +12,7 @@ storage:
   password: ""
   db: 0
 reaction_service:
-  endpoint: "http://localhost:2343"
+  endpoint: "http://localhost:2323"
 messaging:
   servers: "localhost:29092"
   group: "geo1"

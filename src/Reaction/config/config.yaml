@@ -1,0 +1,16 @@
+service:
+  env: "local"
+  name: "reaction service"
+  version: "v1"
+  instance: "reaction1"
+grpc:
+  port: 2343
+http:
+  port: 2323
+storage:
+  addr: "localhost:6379"
+  password: ""
+  db: 0
+tracing:
+  enabled: true
+  endpoint: "localhost:4318"
