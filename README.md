@@ -53,18 +53,19 @@ grpcurl -H 'authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJQcm9ma
 cd cicd/debug
 docker compose up -d
 # run application
-cd src/Geo
+cd ../../src/Geo
 export CONFIG_PATH='config/config.yaml'; export CGO_ENABLED=1; go run cmd/tinder-geo/main.go
 ```
 ### Windows
 Предварительно должен быть установлен GCC. В данном примере используется [TDM-GCC](https://github.com/jmeubank/tdm-gcc), который установлен по пути `C:\TDM-GCC-64\bin\gcc`.
-Для запуска инфраструктуры и приложения необходимо использовать следующие команды в командной строке:
+
+Для запуска инфраструктуры и приложения необходимо использовать следующие команды в PowerShell:
 ```
 # run infra
 cd cicd/debug
 docker compose up -d
 # run application
-cd src/Geo
+cd ../../src/Geo
 $env:CONFIG_PATH = '././config/config.yaml'; $env:CGO_ENABLED=1; $env:CC="C:\TDM-GCC-64\bin\gcc"; go run cmd/tinder-geo/main.go
 ```
 ### End-to-end testing
