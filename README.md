@@ -46,7 +46,7 @@ grpcurl -H 'authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJQcm9ma
 Должен быть получен пустой ответ, т.к. не были созданы профили (эта функция тоже работает)
 
 В jaeger можно увидеть трассировку по данному запросу с командой в Redis
-### MAC OS
+### Mac OS
 Для запуска инфраструктуры и приложения необходимо использовать следующие команды в терминале:
 ```
 # run infra
@@ -66,4 +66,9 @@ docker compose up -d
 # run application
 cd src/Geo
 $env:CONFIG_PATH = '././config/config.yaml'; $env:CGO_ENABLED=1; $env:CC="C:\TDM-GCC-64\bin\gcc"; go run cmd/tinder-geo/main.go
+```
+### End-to-end testing
+```
+cd src/Geo/test/e2e
+go test -v --tags=e2e -count=1 ./... -coverprofile=cover.out
 ```
