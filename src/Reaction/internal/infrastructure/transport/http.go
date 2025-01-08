@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"tinder-reaction/internal/config"
+	"tinder-reaction/internal/infrastructure/transport/middleware"
 	"tinder-reaction/internal/infrastructure/transport/model"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -28,11 +29,15 @@ func NewHTTPServer(
 	config config.HTTPConfig,
 	service Service,
 	promRegistry *prometheus.Registry) HTTPServer {
-	m := http.NewServeMux()
+	mux := http.NewServeMux()
+
+	handler := middleware.Logging(mux)
+	handler = middleware.Authenticator(handler)
+	handler = middleware.PanicRecovery(handler)
 
 	srv := &http.Server{
 		Addr:    fmt.Sprintf(":%d", config.Port),
-		Handler: m,
+		Handler: handler,
 	}
 
 	server := HTTPServer{
@@ -41,19 +46,36 @@ func NewHTTPServer(
 		service: service,
 	}
 
-	m.Handle("/metrics", promhttp.HandlerFor(
+	mux.Handle("/metrics", promhttp.HandlerFor(
 		promRegistry,
 		promhttp.HandlerOpts{
 			EnableOpenMetrics: true,
 		},
 	))
-	m.HandleFunc("GET /reactions/{profileId}", server.getReactionsHandler)
+	mux.HandleFunc("GET /reactions/{profileId}", server.getReactionsHandler)
 
 	return server
 }
 
+func (s HTTPServer) Run() error {
+	slog.Info("HTTP server is running", slog.Int("port", s.config.Port))
+	slog.Info("metrics are available via", slog.String("url", fmt.Sprintf("%s/metrics", s.srv.Addr)))
+
+	if err := s.srv.ListenAndServe(); err != http.ErrServerClosed {
+		return err
+	}
+
+	return nil
+}
+
+func (s HTTPServer) GracefulStop(ctx context.Context) {
+	err := s.srv.Shutdown(ctx)
+	if err != nil {
+		slog.ErrorContext(ctx, "HTTP server shutdown error", slog.Any("error", err))
+	}
+}
+
 func (s HTTPServer) getReactionsHandler(w http.ResponseWriter, r *http.Request) {
-	// todo: в middleware проверить jwt - должен быть Admin или Service:Geo
 	// todo: здесь нужно получить traceId от geo сервиса и продолжить регистрировать спаны в нем
 	profileIdParam := r.PathValue("profileId")
 	profileId, err := strconv.ParseInt(profileIdParam, 10, 64)
@@ -75,22 +97,4 @@ func (s HTTPServer) getReactionsHandler(w http.ResponseWriter, r *http.Request) 
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(profiles)
-}
-
-func (s HTTPServer) Run() error {
-	slog.Info("HTTP server is running", slog.Int("port", s.config.Port))
-	slog.Info("metrics are available via", slog.String("url", fmt.Sprintf("%s/metrics", s.srv.Addr)))
-
-	if err := s.srv.ListenAndServe(); err != http.ErrServerClosed {
-		return err
-	}
-
-	return nil
-}
-
-func (s HTTPServer) GracefulStop(ctx context.Context) {
-	err := s.srv.Shutdown(ctx)
-	if err != nil {
-		slog.ErrorContext(ctx, "HTTP server shutdown error", slog.Any("error", err))
-	}
 }

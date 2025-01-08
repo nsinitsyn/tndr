@@ -138,6 +138,7 @@ func interceptorLogger() logging.Logger {
 	})
 }
 
+// todo: вынести в отдельный файл, как middleware
 func authenticator(ctx context.Context) (context.Context, error) {
 	token, err := auth.AuthFromMD(ctx, "bearer")
 	if err != nil {
