@@ -32,9 +32,9 @@ type HTTPConfig struct {
 }
 
 type StorageConfig struct {
-	Addr     string `yaml:"addr" env-required:"true"`
-	Password string `yaml:"password" env-default:""`
-	DB       int    `yaml:"db" env-default:"0"`
+	Hostname  string `yaml:"hostname" env-required:"true"`
+	Port      int    `yaml:"port" env-required:"true"`
+	Namespace string `yaml:"namespace" env-required:"true"`
 }
 
 type TracingConfig struct {

@@ -13,6 +13,9 @@ var _ transport.Service = (*reactionService)(nil)
 const PRECISION uint = 5
 
 type ReactionStorage interface {
+	AddLike(profileId int64, likedProfileId int64) error
+	AddDislike(profileId int64, likedProfileId int64) error
+	GetReactions(profileId int64) ([]int64, error)
 }
 
 type reactionService struct {
@@ -24,13 +27,15 @@ func NewReactionService(storage ReactionStorage) reactionService {
 }
 
 func (g reactionService) Like(ctx context.Context, profileId int64, gender model.Gender, likedProfileId int64) error {
-	return nil
+	// todo: определять матч
+	return g.storage.AddLike(profileId, likedProfileId)
 }
 
 func (g reactionService) Dislike(ctx context.Context, profileId int64, gender model.Gender, dislikedProfileId int64) error {
-	return nil
+	// todo: определять матч
+	return g.storage.AddDislike(profileId, dislikedProfileId)
 }
 
 func (g reactionService) GetReactionsForProfile(ctx context.Context, profileId int64) ([]int64, error) {
-	return []int64{100, 200, 300}, nil
+	return g.storage.GetReactions(profileId)
 }

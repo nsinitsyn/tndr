@@ -34,7 +34,7 @@ func Stop(grpcServer *grpc.Server, logger *slog.Logger) {
 	grpcServer.GracefulStop()
 }
 
-// grpcurl -H 'authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJQcm9maWxlSWQiOiIxIiwiR2VuZGVyIjoiTSIsImV4cCI6MTc2MzIwNzQxMywiaXNzIjoiQXV0aFNlcnZlciIsImF1ZCI6IkF1dGhDbGllbnQifQ.VAVP65lIUhabxR4UknvQkRKiVCfu116cf3tZC8-dsfw' -plaintext -d '{"latitude":55.481, "longitude":37.288}' 172.24.48.1:2342 tinder.GeoService/GetProfilesByLocation
+// grpcurl -H 'authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJQcm9maWxlSWQiOiIxIiwiR2VuZGVyIjoiTSIsImV4cCI6MTc2MzIwNzQxMywiaXNzIjoiQXV0aFNlcnZlciIsImF1ZCI6IkF1dGhDbGllbnQifQ.VAVP65lIUhabxR4UknvQkRKiVCfu116cf3tZC8-dsfw' -plaintext -d '{"profile_id":456}' 172.24.48.1:2343 tinder.ReactionService/Like
 func (s reactionServer) Like(ctx context.Context, req *tinderpbv1.LikeRequest) (*tinderpbv1.LikeResponse, error) {
 	profileId, gender, err := parseArgumentsFromContext(ctx)
 	if err != nil {

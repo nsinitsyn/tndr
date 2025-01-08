@@ -5,7 +5,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "LaunchOnMacOs",
+            "name": "Geo-MacOs",
             "type": "go",
             "request": "launch",
             "mode": "debug",
@@ -16,7 +16,18 @@
             },
         },
         {
-            "name": "LaunchOnWindows",
+            "name": "Reaction-MacOs",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/src/Reaction/cmd/tinder-reaction",
+            "env": {
+                "CONFIG_PATH":"../../config/config.yaml",
+                "CGO_ENABLED":"1"
+            },
+        },
+        {
+            "name": "Geo-Windows",
             "type": "go",
             "request": "launch",
             "mode": "debug",

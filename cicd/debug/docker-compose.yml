@@ -10,6 +10,18 @@ services:
       - "6379:6379"
     volumes:
       - ./redis.conf:/usr/local/etc/redis/redis.conf
+
+  aerospike:
+    container_name: tndr-aerospike
+    image: aerospike/aerospike-server-enterprise
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+      - "3001:3001"
+      - "3002:3002"
+    command: [ "--config-file","/opt/aerospike/etc/aerospike.conf"]
+    volumes:
+      - ./aerospike.conf:/opt/aerospike/etc/aerospike.conf
       
   jaeger:
     container_name: tndr-jaeger

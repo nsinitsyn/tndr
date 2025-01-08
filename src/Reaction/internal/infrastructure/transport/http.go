@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"tinder-reaction/internal/config"
+	"tinder-reaction/internal/infrastructure/transport/model"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -53,15 +54,17 @@ func NewHTTPServer(
 
 func (s HTTPServer) getReactionsHandler(w http.ResponseWriter, r *http.Request) {
 	// todo: в middleware проверить jwt - должен быть Admin или Service:Geo
+	// todo: здесь нужно получить traceId от geo сервиса и продолжить регистрировать спаны в нем
 	profileIdParam := r.PathValue("profileId")
 	profileId, err := strconv.ParseInt(profileIdParam, 10, 64)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		w.Write([]byte("profileId must be of type int64"))
+		resp := model.ErrorResponse{Error: "Parameter 'profileId' must be of type int64"}
+		json.NewEncoder(w).Encode(resp)
 		return
 	}
 
-	slog.Info("got data", slog.Int64("profileId", profileId))
+	// slog.Info("got data", slog.Int64("profileId", profileId))
 	profiles, err := s.service.GetReactionsForProfile(r.Context(), profileId)
 
 	if err != nil {

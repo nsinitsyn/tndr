@@ -53,7 +53,7 @@ func Run(ctx context.Context) {
 	httpServer := transport.NewHTTPServer(config.HTTP, service, promRegistry)
 
 	wg := sync.WaitGroup{}
-	wg.Add(2)
+	wg.Add(3)
 
 	go func() {
 		if err := grpcServer.Run(); err != nil {
@@ -76,7 +76,10 @@ func Run(ctx context.Context) {
 	<-ctx.Done()
 	go grpcServer.GracefulStop()
 	go httpServer.GracefulStop(context.Background())
-	// storage.Close()
+	go func() {
+		storage.Close()
+		wg.Done()
+	}()
 
 	stopped := make(chan struct{})
 	go func() {
